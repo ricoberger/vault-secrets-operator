@@ -111,6 +111,9 @@ $RECYCLE.BIN/
 ############ Custom ############
 ################################
 
+# Temporary Files
+tmp
+
 # Temporary Build Files
 build/_output
 build/_test

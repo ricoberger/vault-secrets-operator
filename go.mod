@@ -3,6 +3,7 @@ module github.com/ricoberger/vault-secrets-operator
 require (
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/go-openapi/spec v0.19.0
+	github.com/hashicorp/vault/api v1.0.4
 	github.com/operator-framework/operator-sdk v0.10.1-0.20190820174346-abac23c897b8
 	github.com/spf13/pflag v1.0.3
 	k8s.io/api v0.0.0-20190612125737-db0771252981

@@ -2,8 +2,11 @@ package vaultsecret
 
 import (
 	"context"
+	"fmt"
 
 	ricobergerv1alpha1 "github.com/ricoberger/vault-secrets-operator/pkg/apis/ricoberger/v1alpha1"
+	"github.com/ricoberger/vault-secrets-operator/pkg/vault"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,8 +55,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner VaultSecret
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	// Watch for changes to secondary resource Secrets and requeue the owner VaultSecret
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &ricobergerv1alpha1.VaultSecret{},
 	})
@@ -77,8 +80,6 @@ type ReconcileVaultSecret struct {
 
 // Reconcile reads that state of the cluster for a VaultSecret object and makes changes based on the state read
 // and what is in the VaultSecret.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -100,54 +101,56 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	// Define a new Pod object
-	pod := newPodForCR(instance)
+	reqLogger.Info(fmt.Sprintf("%#v", instance))
+	data, err := vault.GetSecret(instance.Spec.Path)
+	if err != nil {
+		reqLogger.Error(err, "Could not create secret")
+		return reconcile.Result{}, nil
+	}
+	reqLogger.Info(fmt.Sprintf("%v", data))
+
+	// Define a new Secret object
+	secret := newSecretForCR(instance, data)
 
 	// Set VaultSecret instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
+	if err := controllerutil.SetControllerReference(instance, secret, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Check if this Pod already exists
-	found := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
+	// Check if this Secret already exists
+	found := &corev1.Secret{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-		err = r.client.Create(context.TODO(), pod)
+		reqLogger.Info("Creating a new Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+		err = r.client.Create(context.TODO(), secret)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
-		// Pod created successfully - don't requeue
+		// Secret created successfully - don't requeue
 		return reconcile.Result{}, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
+	// Secret already exists - don't requeue
+	reqLogger.Info("Skip reconcile: Secret already exists", "Secret.Namespace", found.Namespace, "Secret.Name", found.Name)
 	return reconcile.Result{}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *ricobergerv1alpha1.VaultSecret) *corev1.Pod {
+// newSecretForCR returns a secret with the same name/namespace as the cr
+func newSecretForCR(cr *ricobergerv1alpha1.VaultSecret, data map[string][]byte) *corev1.Secret {
 	labels := map[string]string{
-		"app": cr.Name,
+		"created-by": "vault-secrets-operator",
 	}
-	return &corev1.Pod{
+
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
+			Name:      cr.Name,
 			Namespace: cr.Namespace,
 			Labels:    labels,
 		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
+		Data: data,
+		Type: cr.Spec.Type,
 	}
 }
