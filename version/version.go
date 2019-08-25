@@ -1,5 +1,10 @@
 package version
 
+// Build information. Populated at build-time.
 var (
-	Version = "0.0.1"
+	Version   string
+	Revision  string
+	Branch    string
+	BuildUser string
+	BuildDate string
 )

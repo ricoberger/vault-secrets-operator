@@ -13,6 +13,7 @@ import (
 
 	"github.com/ricoberger/vault-secrets-operator/pkg/apis"
 	"github.com/ricoberger/vault-secrets-operator/pkg/controller"
+	"github.com/ricoberger/vault-secrets-operator/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
@@ -39,9 +40,14 @@ var (
 var log = logf.Log.WithName("cmd")
 
 func printVersion() {
+	log.Info(fmt.Sprintf("Version: %s", version.Version))
+	log.Info(fmt.Sprintf("Branch: %s", version.Branch))
+	log.Info(fmt.Sprintf("Revision: %s", version.Revision))
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
+	log.Info(fmt.Sprintf("Build User: %s", version.BuildUser))
+	log.Info(fmt.Sprintf("Build Date: %s", version.BuildDate))
 }
 
 func main() {
