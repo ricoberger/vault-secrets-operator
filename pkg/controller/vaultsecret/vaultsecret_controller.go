@@ -54,7 +54,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Secrets and requeue the owner VaultSecret
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
@@ -102,12 +101,11 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	reqLogger.Info(fmt.Sprintf("%#v", instance))
-	data, err := vault.GetSecret(instance.Spec.Path)
+	data, err := vault.GetSecret(instance.Spec.Path, instance.Spec.Keys)
 	if err != nil {
 		reqLogger.Error(err, "Could not create secret")
 		return reconcile.Result{}, nil
 	}
-	reqLogger.Info(fmt.Sprintf("%v", data))
 
 	// Define a new Secret object
 	secret := newSecretForCR(instance, data)
@@ -133,8 +131,14 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	// Secret already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Secret already exists", "Secret.Namespace", found.Namespace, "Secret.Name", found.Name)
+	// Secret already exists, update the secret
+	reqLogger.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+	err = r.client.Update(context.TODO(), secret)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Secret updated successfully - don't requeue
 	return reconcile.Result{}, nil
 }
 

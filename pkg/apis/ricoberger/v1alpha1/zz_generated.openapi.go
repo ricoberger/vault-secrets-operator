@@ -66,17 +66,32 @@ func schema_pkg_apis_ricoberger_v1alpha1_VaultSecretSpec(ref common.ReferenceCal
 			SchemaProps: spec.SchemaProps{
 				Description: "VaultSecretSpec defines the desired state of VaultSecret",
 				Properties: map[string]spec.Schema{
+					"keys": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Keys is an array of Keys, which should be included in the Kubernetes secret. If the Keys field is ommitted all keys from the Vault secret will be included in the Kubernetes secret.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 					"path": {
 						SchemaProps: spec.SchemaProps{
-							Description: "INSERT ADDITIONAL SPEC FIELDS - desired state of cluster Important: Run \"operator-sdk generate k8s\" to regenerate code after modifying this file Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html",
+							Description: "Path is the path of the corresponding secret in Vault.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "Type is the type of the Kubernetes secret, which will be created by the Vault Secrets Operator.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

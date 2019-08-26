@@ -13,6 +13,7 @@ import (
 
 	"github.com/ricoberger/vault-secrets-operator/pkg/apis"
 	"github.com/ricoberger/vault-secrets-operator/pkg/controller"
+	"github.com/ricoberger/vault-secrets-operator/pkg/vault"
 	"github.com/ricoberger/vault-secrets-operator/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -72,6 +73,16 @@ func main() {
 	logf.SetLogger(zap.Logger())
 
 	printVersion()
+
+	// Create the API client for Vault and start the renew process for the
+	// token in a new goroutine.
+	err := vault.CreateClient()
+	if err != nil {
+		log.Error(err, "Could not create API client for Vault")
+		os.Exit(1)
+	}
+
+	go vault.RenewToken()
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {

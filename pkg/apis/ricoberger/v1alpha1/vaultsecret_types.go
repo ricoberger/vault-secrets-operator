@@ -11,19 +11,20 @@ import (
 // VaultSecretSpec defines the desired state of VaultSecret
 // +k8s:openapi-gen=true
 type VaultSecretSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	Path string            `json:"path"`
+	// Keys is an array of Keys, which should be included in the Kubernetes
+	// secret. If the Keys field is ommitted all keys from the Vault secret will
+	// be included in the Kubernetes secret.
+	Keys []string `json:"keys,omitempty"`
+	// Path is the path of the corresponding secret in Vault.
+	Path string `json:"path"`
+	// Type is the type of the Kubernetes secret, which will be created by the
+	// Vault Secrets Operator.
 	Type corev1.SecretType `json:"type"`
 }
 
 // VaultSecretStatus defines the observed state of VaultSecret
 // +k8s:openapi-gen=true
 type VaultSecretStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
