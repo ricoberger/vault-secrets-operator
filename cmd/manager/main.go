@@ -41,6 +41,8 @@ var (
 var log = logf.Log.WithName("cmd")
 
 func printVersion() {
+	version.SetBuildInformation()
+
 	log.Info(fmt.Sprintf("Version: %s", version.Version))
 	log.Info(fmt.Sprintf("Branch: %s", version.Branch))
 	log.Info(fmt.Sprintf("Revision: %s", version.Revision))
