@@ -1,0 +1,49 @@
+{{ if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault-secrets-operator
+  labels:
+{{ include "vault-secrets-operator.labels" . | indent 4 }}
+rules:
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    - secrets
+    verbs:
+    - '*'
+  - apiGroups:
+    - monitoring.coreos.com
+    resources:
+    - servicemonitors
+    verbs:
+    - get
+    - create
+  - apiGroups:
+    - apps
+    resourceNames:
+    - vault-secrets-operator
+    resources:
+    - deployments/finalizers
+    verbs:
+    - update
+  - apiGroups:
+    - ""
+    resources:
+    - pods
+    verbs:
+    - get
+  - apiGroups:
+    - apps
+    resources:
+    - replicasets
+    verbs:
+    - get
+  - apiGroups:
+    - ricoberger.de
+    resources:
+    - '*'
+    verbs:
+    - '*'
+{{ end }}

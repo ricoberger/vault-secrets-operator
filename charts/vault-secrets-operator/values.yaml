@@ -1,0 +1,51 @@
+replicaCount: 1
+
+image:
+  repository: ricoberger/vault-secrets-operator
+  tag: 1.0.0
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+environmentVars:
+  - envName: VAULT_ADDRESS
+    secretName: vault-secrets-operator
+    secretKey: VAULT_ADDRESS
+  - envName: VAULT_TOKEN
+    secretName: vault-secrets-operator
+    secretKey: VAULT_TOKEN
+  - envName: VAULT_TOKEN_TTL
+    secretName: vault-secrets-operator
+    secretKey: VAULT_TOKEN_TTL
+
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
+  name: vault-secrets-operator
+
+service:
+  type: ClusterIP
+  metricsPort: 8383
+  operatorMetricsPort: 8686
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
