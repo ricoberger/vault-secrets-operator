@@ -1,0 +1,33 @@
+name: Helm
+on: [release]
+jobs:
+  build-release:
+    name: Release Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go 1.12
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.12
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+
+    - name: Configure git
+      run: git config --global user.email "mail@ricoberger.de" && git config --global user.name "ricoberger"
+
+    - name: Package Helm chart
+      run: helm init --client-only && helm package ./charts/vault-secrets-operator
+
+    - name: Clone Helm repository
+      run: git clone https://github.com/ricoberger/helm-charts.git
+
+    - name: Update Helm repository
+      run: mv vault-secrets-operator* ./helm-charts/ && helm repo index helm-charts/ --url https://ricoberger.github.io/helm-charts/
+
+    - name: Commit changes
+      run: cd helm-charts/ && git add . && git commit -m "Add new release for Vault Secrets Operator"
+
+    - name: Push changes
+      run: cd helm-charts/ && git push https://ricoberger:${{ secrets.TOKEN }}@github.com/ricoberger/helm-charts.git
