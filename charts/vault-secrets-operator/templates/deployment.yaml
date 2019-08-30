@@ -25,6 +25,8 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            {{- toYaml .Values.image.args | nindent 12 }}
           env:
             - name: WATCH_NAMESPACE
               value: ""
