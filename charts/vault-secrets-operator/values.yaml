@@ -1,3 +1,5 @@
+createCRD: true
+
 replicaCount: 1
 
 image:
