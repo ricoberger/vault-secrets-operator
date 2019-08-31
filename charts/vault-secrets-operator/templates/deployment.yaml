@@ -36,6 +36,14 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "vault-secrets-operator"
+            - name: VAULT_ADDRESS
+              value: {{ .Values.vault.address }}
+            - name: VAULT_AUTH_METHOD
+              value: {{ .Values.vault.authMethod }}
+            - name: VAULT_KUBERNETES_PATH
+              value: {{ .Values.vault.kubernetesPath }}
+            - name: VAULT_KUBERNETES_ROLE
+              value: {{ .Values.vault.kubernetesRole }}
             {{- include "vault-secrets-operator.environmentVars" .Values | nindent 12 }}
           ports:
             - name: metrics

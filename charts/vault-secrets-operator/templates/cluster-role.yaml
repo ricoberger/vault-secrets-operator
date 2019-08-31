@@ -6,11 +6,27 @@ metadata:
   labels:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
 rules:
+{{ include "vault-secrets-operator.kubernetesAuthRules" . | indent 2 }}
   - apiGroups:
     - ""
     resources:
+    - pods
+    - services
+    - services/finalizers
+    - endpoints
+    - persistentvolumeclaims
+    - events
     - configmaps
     - secrets
+    verbs:
+    - '*'
+  - apiGroups:
+    - apps
+    resources:
+    - deployments
+    - daemonsets
+    - replicasets
+    - statefulsets
     verbs:
     - '*'
   - apiGroups:
