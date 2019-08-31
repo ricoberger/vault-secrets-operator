@@ -1,5 +1,3 @@
-createCRD: true
-
 replicaCount: 1
 
 image:
@@ -22,6 +20,9 @@ environmentVars:
   - envName: VAULT_TOKEN_TTL
     secretName: vault-secrets-operator
     secretKey: VAULT_TOKEN_TTL
+
+crd:
+  create: true
 
 rbac:
   create: true
