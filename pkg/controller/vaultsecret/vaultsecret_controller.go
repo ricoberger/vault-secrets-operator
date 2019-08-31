@@ -79,8 +79,7 @@ type ReconcileVaultSecret struct {
 
 // Reconcile reads that state of the cluster for a VaultSecret object and makes changes based on the state read
 // and what is in the VaultSecret.Spec
-// Note:
-// The Controller will requeue the Request to be processed again if the returned error is non-nil or
+// Note: The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
