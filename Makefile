@@ -1,7 +1,7 @@
 BRANCH       ?= $(shell git rev-parse --abbrev-ref HEAD)
 BUILDTIME    ?= $(shell date '+%Y-%m-%d@%H:%M:%S')
 BUILDUSER    ?= $(shell id -un)
-DOCKER_IMAGE ?= ricoberger/vault-secrets-operator
+DOCKER_IMAGE ?= vault-secrets-operator
 REPO         ?= github.com/ricoberger/vault-secrets-operator
 REVISION     ?= $(shell git rev-parse HEAD)
 VERSION      ?= $(shell git describe --tags)
@@ -12,7 +12,10 @@ build:
 	operator-sdk build --go-build-args "-ldflags -X=${REPO}/version.BuildInformation=${VERSION},${REVISION},${BRANCH},${BUILDUSER},${BUILDTIME}" $(DOCKER_IMAGE):${VERSION}
 
 release: build
-	docker push $(DOCKER_IMAGE):${VERSION}
+	docker tag $(DOCKER_IMAGE):${VERSION} ricoberger/$(DOCKER_IMAGE):${VERSION}
+	docker tag $(DOCKER_IMAGE):${VERSION} docker.pkg.github.com/ricoberger/packageregistry/$(DOCKER_IMAGE):${VERSION}
+	docker push ricoberger/$(DOCKER_IMAGE):${VERSION}
+	docker push docker.pkg.github.com/ricoberger/packageregistry/$(DOCKER_IMAGE):${VERSION}
 
 release-major:
 	$(eval MAJORVERSION=$(shell git describe --tags --abbrev=0 | sed s/v// | awk -F. '{print $$1+1".0.0"}'))
