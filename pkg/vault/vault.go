@@ -155,7 +155,7 @@ func RenewToken() {
 }
 
 // GetSecret returns the value for a given secret.
-func GetSecret(secretEngine string, path string, keys []string) (map[string][]byte, error) {
+func GetSecret(secretEngine string, path string, keys []string, version int) (map[string][]byte, error) {
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 
@@ -174,7 +174,17 @@ func GetSecret(secretEngine string, path string, keys []string) (map[string][]by
 		}
 	}
 
-	secret, err := client.Logical().Read(path)
+	// Check if the secret engine is KV2. If yes, we also check if a version
+	// is provided (when not the version will be 0) and fill the request data
+	// with the version parameter. If the version is omitted or KV1 secret
+	// engine is used the ReadWithData acts like the Read method.
+	reqData := make(map[string][]string)
+
+	if secretEngine == "kv2" && version != 0 {
+		reqData["version"] = []string{strconv.Itoa(version)}
+	}
+
+	secret, err := client.Logical().ReadWithData(path, reqData)
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +212,7 @@ func GetSecret(secretEngine string, path string, keys []string) (map[string][]by
 	for key, value := range secretData {
 		if len(keys) == 0 || contains(key, keys) {
 			if valueStr, ok := value.(string); ok {
+				log.Info(fmt.Sprintf("key: %s value: %s", key, valueStr))
 				data[key] = []byte(valueStr)
 			}
 		}

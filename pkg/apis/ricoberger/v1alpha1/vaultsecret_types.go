@@ -26,6 +26,10 @@ type VaultSecretSpec struct {
 	// Type is the type of the Kubernetes secret, which will be created by the
 	// Vault Secrets Operator.
 	Type corev1.SecretType `json:"type"`
+	// Version sets the version of the secret which should be used. The version
+	// is only used if the SecretEngine is of type 'kv2'. If the version is
+	// omitted the Operator uses the latest version of the secret.
+	Version int `json:"version,omitempty"`
 }
 
 // VaultSecretStatus defines the observed state of VaultSecret

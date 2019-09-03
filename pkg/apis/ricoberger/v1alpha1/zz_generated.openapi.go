@@ -101,6 +101,13 @@ func schema_pkg_apis_ricoberger_v1alpha1_VaultSecretSpec(ref common.ReferenceCal
 							Format:      "",
 						},
 					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version sets the version of the secret which should be used. The version is only used if the SecretEngine is of type 'kv2'. If the version is omitted the Operator uses the latest version of the secret.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 				Required: []string{"path", "type"},
 			},
