@@ -87,6 +87,13 @@ func schema_pkg_apis_ricoberger_v1alpha1_VaultSecretSpec(ref common.ReferenceCal
 							Format:      "",
 						},
 					},
+					"secretEngine": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretEngine specifies the type of the Vault secret engine in which the secret is stored. Currently the 'KV Secrets Engine - Version 1' and 'KV Secrets Engine - Version 2' are supported. The value must be 'kv1' or 'kv2'. If the value is omitted or an other values is used the Vault Secrets Operator will try to use the 'KV Secrets Engine - Version 1'.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type is the type of the Kubernetes secret, which will be created by the Vault Secrets Operator.",

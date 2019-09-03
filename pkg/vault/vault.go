@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/api"
@@ -28,6 +29,14 @@ var (
 	ErrMissingVaultKubernetesRole = errors.New("missing ttl for vault token")
 	// ErrMissingVaultAuthInfo is our error, if sth. went wrong during the authentication agains Vault.
 	ErrMissingVaultAuthInfo = errors.New("missing authentication information")
+	// ErrInvalidPath is our error, if the path of a secret is invalid.
+	ErrInvalidPath = errors.New("invalid path")
+	// ErrSecretIsNil is our error, if the returned secret from Vault is nil.
+	ErrSecretIsNil = errors.New("secret is nil")
+	// ErrParseSecret is our error if the secret could not be parsed.
+	ErrParseSecret = errors.New("could not parse secret")
+	// ErrInvalidSecretData is our error if the returned secret data is invalid.
+	ErrInvalidSecretData = errors.New("invalid secret data")
 
 	// log is our customized logger.
 	log = logf.Log.WithName("vault")
@@ -146,9 +155,24 @@ func RenewToken() {
 }
 
 // GetSecret returns the value for a given secret.
-func GetSecret(path string, keys []string) (map[string][]byte, error) {
+func GetSecret(secretEngine string, path string, keys []string) (map[string][]byte, error) {
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
+
+	// Check if the 'KV Secrets Engine - Version 1' is used for the provided
+	// secret. If the secret is stored in a KV2 secrets engine the path must
+	// contain a 'data' at the second position. If the path does not contain the
+	// 'data' part we add it.
+	if secretEngine == "kv2" {
+		pathParts := strings.Split(path, "/")
+		if len(pathParts) < 2 {
+			return nil, ErrInvalidPath
+		}
+
+		if pathParts[1] != "data" {
+			path = pathParts[0] + "/data/" + strings.Join(pathParts[1:], "/")
+		}
+	}
 
 	secret, err := client.Logical().Read(path)
 	if err != nil {
@@ -156,19 +180,39 @@ func GetSecret(path string, keys []string) (map[string][]byte, error) {
 	}
 
 	if secret == nil {
-		return nil, errors.New("could not get secret")
+		return nil, ErrSecretIsNil
+	}
+
+	// The structure for a KV2 secret differs from the structure of a KV1
+	// secret. Next to the secret 'data' a KV2 secret contains also some
+	// 'metadata'. We only need the 'data' field to go on.
+	secretData := secret.Data
+	if secretEngine == "kv2" {
+		var ok bool
+		secretData, ok = secret.Data["data"].(map[string]interface{})
+		if !ok {
+			return nil, ErrParseSecret
+		}
 	}
 
 	// Convert the secret data for a Kubernetes secret. We only add the provided
 	// keys to the resulting data or if there are no keys provided we add all
 	// keys of the secret.
 	data := make(map[string][]byte)
-	for key, value := range secret.Data {
+	for key, value := range secretData {
 		if len(keys) == 0 || contains(key, keys) {
 			if valueStr, ok := value.(string); ok {
 				data[key] = []byte(valueStr)
 			}
 		}
+	}
+
+	// If the data map is empty we return an error. This can happend, if the
+	// secret which was retrieved from Vault is under a KV2 secrets engine, but
+	// the secret engine was not provided in the cr for the secret. Then the
+	// returned secret looks like this: &api.Secret{RequestID:\"be7b671f-a097-1081-15ec-b4710f2a6249\", LeaseID:\"\", LeaseDuration:0, Renewable:false, Data:map[string]interface {}(nil), Warnings:[]string{\"Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, use 'vault kv get' for this operation.\"}, Auth:(*api.SecretAuth)(nil), WrapInfo:(*api.SecretWrapInfo)(nil)}"}
+	if len(data) == 0 {
+		return nil, ErrInvalidSecretData
 	}
 
 	return data, nil
