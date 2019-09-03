@@ -2,7 +2,6 @@ package vaultsecret
 
 import (
 	"context"
-	"fmt"
 
 	ricobergerv1alpha1 "github.com/ricoberger/vault-secrets-operator/pkg/apis/ricoberger/v1alpha1"
 	"github.com/ricoberger/vault-secrets-operator/pkg/vault"
@@ -99,10 +98,9 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info(fmt.Sprintf("%#v", instance))
-	data, err := vault.GetSecret(instance.Spec.Path, instance.Spec.Keys)
+	data, err := vault.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version)
 	if err != nil {
-		reqLogger.Error(err, "Could not create secret")
+		reqLogger.Error(err, "Could get secret from vault")
 		return reconcile.Result{}, nil
 	}
 

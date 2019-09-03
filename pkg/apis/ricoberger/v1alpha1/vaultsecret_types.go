@@ -17,9 +17,19 @@ type VaultSecretSpec struct {
 	Keys []string `json:"keys,omitempty"`
 	// Path is the path of the corresponding secret in Vault.
 	Path string `json:"path"`
+	// SecretEngine specifies the type of the Vault secret engine in which the
+	// secret is stored. Currently the 'KV Secrets Engine - Version 1' and
+	// 'KV Secrets Engine - Version 2' are supported. The value must be 'kv1' or
+	// 'kv2'. If the value is omitted or an other values is used the Vault
+	// Secrets Operator will try to use the 'KV Secrets Engine - Version 1'.
+	SecretEngine string `json:"secretEngine,omitempty"`
 	// Type is the type of the Kubernetes secret, which will be created by the
 	// Vault Secrets Operator.
 	Type corev1.SecretType `json:"type"`
+	// Version sets the version of the secret which should be used. The version
+	// is only used if the SecretEngine is of type 'kv2'. If the version is
+	// omitted the Operator uses the latest version of the secret.
+	Version int `json:"version,omitempty"`
 }
 
 // VaultSecretStatus defines the observed state of VaultSecret
