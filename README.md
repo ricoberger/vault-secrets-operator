@@ -22,17 +22,22 @@ helm upgrade --install vault-secrets-operator ricoberger/vault-secrets-operator
 
 ### Prepare Vault
 
-The Vault Secrets Operator only supports the **KV Secrets Engine - Version 1**. To create a new secret engine under a path named `secrets`, you can run the following command:
+The Vault Secrets Operator supports the **KV Secrets Engine - Version 1** and **KV Secrets Engine - Version 1**. To create a new secret engine under a path named `kv1` and `kv2`, you can run the following command:
 
 ```sh
-vault secrets enable -path=secrets -version=1 kv
+vault secrets enable -path=kv1 -version=1 kv
+vault secrets enable -path=kv2 -version=2 kv
 ```
 
-After you have enabled the secret engine, create a new policy for the Vault Secrets Operator. The operator only needs read access to the paths you want to use for your secrets. To create a new policy with the name `vault-secrets-operator` and read access to the `secrets` path, you can run the following command:
+After you have enabled the secret engine, create a new policy for the Vault Secrets Operator. The operator only needs read access to the paths you want to use for your secrets. To create a new policy with the name `vault-secrets-operator` and read access to the `kv1` and `kv2` path, you can run the following command:
 
 ```sh
 cat <<EOF | vault policy write vault-secrets-operator -
-path "secrets/*" {
+path "kv1/*" {
+  capabilities = ["read"]
+}
+
+path "kv2/data/*" {
   capabilities = ["read"]
 }
 EOF
@@ -114,27 +119,31 @@ vault write auth/kubernetes/role/vault-secrets-operator \
 
 ## Usage
 
-Create a Vault secret `example-vaultsecret` with the keys `foo` and `hello`:
+Create two Vault secrets `example-vaultsecret`:
 
 ```sh
-vault kv put secrets/example-vaultsecret foo=bar hello=world
+vault kv put kv1/example-vaultsecret foo=bar hello=world
+
+vault kv put kv2/example-vaultsecret foo=bar
+vault kv put kv2/example-vaultsecret hello=world
+vault kv put kv2/example-vaultsecret foo=bar hello=world
 ```
 
-Deploy the `example-vaultsecret` to your Kubernetes cluster, you can use the following CR:
+Deploy the custom resource `kv1-example-vaultsecret` to your Kubernetes cluster:
 
 ```yaml
 apiVersion: ricoberger.de/v1alpha1
 kind: VaultSecret
 metadata:
-  name: example-vaultsecret
+  name: kv1-example-vaultsecret
 spec:
   keys:
     - foo
-  path: secrets/example-vaultsecret
+  path: kv1/example-vaultsecret
   type: Opaque
 ```
 
-The Vault Secrets Operator creates a Kubernetes secret named `example-vaultsecret` with the type `Opaque` from this CR:
+The Vault Secrets Operator creates a Kubernetes secret named `kv1-example-vaultsecret` with the type `Opaque` from this CR:
 
 ```yaml
 apiVersion: v1
@@ -144,7 +153,7 @@ kind: Secret
 metadata:
   labels:
     created-by: vault-secrets-operator
-  name: example-vaultsecret
+  name: kv1-example-vaultsecret
 type: Opaque
 ```
 
@@ -159,9 +168,67 @@ kind: Secret
 metadata:
   labels:
     created-by: vault-secrets-operator
-  name: example-vaultsecret
+  name: kv1-example-vaultsecret
 type: Opaque
 ```
+
+To deploy a custom resource `kv2-example-vaultsecret`, which uses the secret from the KV Secrets Engine - Version 2 you can use the following:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: kv2-example-vaultsecret
+spec:
+  path: kv1/example-vaultsecret
+  secretEngine: kv2
+  type: Opaque
+```
+
+The Vault Secrets Operator will create a secret which looks like the following:
+
+```yaml
+apiVersion: v1
+data:
+  foo: YmFy
+  hello: d29ybGQ=
+kind: Secret
+metadata:
+  labels:
+    created-by: vault-secrets-operator
+  name: kv2-example-vaultsecret
+type: Opaque
+```
+
+For secrets using the KV2 secret engine you can also specify the version of the secret you want to deploy:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: kv2-example-vaultsecret
+spec:
+  path: kv1/example-vaultsecret
+  secretEngine: kv2
+  type: Opaque
+  version: 2
+```
+
+The resulting Kubernetes secret will be:
+
+```yaml
+apiVersion: v1
+data:
+  hello: d29ybGQ=
+kind: Secret
+metadata:
+  labels:
+    created-by: vault-secrets-operator
+  name: kv2-example-vaultsecret
+type: Opaque
+```
+
+The `spec.type` and `spec.keys` fields are handled in the same way for both versions of the KV secret engine. If the `spec.secretEngine` field is omitted the KV1 secrets engine is used. The `spec.version` field is only processed, when the `spec.secretEngine` field is `kv2`.
 
 ## Development
 
@@ -180,7 +247,7 @@ operator-sdk generate openapi
 Create an example secret in Vault. Then apply the Custom Resource Definition for the Vault Secrets Operator and the example Custom Resource:
 
 ```sh
-vault kv put secrets/example-vaultsecret foo=bar
+vault kv put kv1/example-vaultsecret foo=bar
 
 kubectl apply -f deploy/crds/ricoberger_v1alpha1_vaultsecret_crd.yaml
 kubectl apply -f deploy/crds/ricoberger_v1alpha1_vaultsecret_cr.yaml
@@ -198,6 +265,7 @@ Specify the Vault address, a token to access Vault and the TTL (in seconds) for 
 
 ```sh
 export VAULT_ADDRESS=
+export VAULT_AUTH_METHOD=token
 export VAULT_TOKEN=
 export VAULT_TOKEN_LEASE_DURATION=
 ```
