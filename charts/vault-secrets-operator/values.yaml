@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ricoberger/vault-secrets-operator
-  tag: 1.1.1
+  tag: 1.2.0
   pullPolicy: IfNotPresent
   args: []
 
