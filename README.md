@@ -22,7 +22,7 @@ helm upgrade --install vault-secrets-operator ricoberger/vault-secrets-operator
 
 ### Prepare Vault
 
-The Vault Secrets Operator supports the **KV Secrets Engine - Version 1** and **KV Secrets Engine - Version 1**. To create a new secret engine under a path named `kv1` and `kv2`, you can run the following command:
+The Vault Secrets Operator supports the **KV Secrets Engine - Version 1** and **KV Secrets Engine - Version 2**. To create a new secret engine under a path named `kv1` and `kv2`, you can run the following command:
 
 ```sh
 vault secrets enable -path=kv1 -version=1 kv
