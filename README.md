@@ -180,7 +180,7 @@ kind: VaultSecret
 metadata:
   name: kv2-example-vaultsecret
 spec:
-  path: kv1/example-vaultsecret
+  path: kv2/example-vaultsecret
   secretEngine: kv2
   type: Opaque
 ```
@@ -208,7 +208,7 @@ kind: VaultSecret
 metadata:
   name: kv2-example-vaultsecret
 spec:
-  path: kv1/example-vaultsecret
+  path: kv2/example-vaultsecret
   secretEngine: kv2
   type: Opaque
   version: 2
