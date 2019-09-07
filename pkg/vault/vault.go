@@ -221,12 +221,16 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 			case map[string]interface{}:
 				jsonString, err := json.Marshal(value)
 				if err != nil {
-					return nil, ErrParseSecretValue
+					return nil, err
 				}
 
 				data[key] = []byte(jsonString)
 			case string:
 				data[key] = []byte(value.(string))
+			case json.Number:
+				data[key] = []byte(value.(json.Number))
+			case bool:
+				data[key] = []byte(fmt.Sprintf("%t", value.(bool)))
 			default:
 				return nil, ErrParseSecretValue
 			}

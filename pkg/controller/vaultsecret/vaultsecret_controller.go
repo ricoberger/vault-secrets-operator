@@ -100,7 +100,7 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 
 	data, err := vault.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version)
 	if err != nil {
-		reqLogger.Error(err, "Could get secret from vault")
+		reqLogger.Error(err, "Could not get secret from vault")
 		return reconcile.Result{}, nil
 	}
 
