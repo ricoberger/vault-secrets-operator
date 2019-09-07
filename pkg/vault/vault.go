@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -37,6 +38,8 @@ var (
 	ErrParseSecret = errors.New("could not parse secret")
 	// ErrInvalidSecretData is our error if the returned secret data is invalid.
 	ErrInvalidSecretData = errors.New("invalid secret data")
+	// ErrParseSecretValue is our error if the returned secret data is invalid.
+	ErrParseSecretValue = errors.New("could not parse secret value")
 
 	// log is our customized logger.
 	log = logf.Log.WithName("vault")
@@ -208,12 +211,28 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 	// Convert the secret data for a Kubernetes secret. We only add the provided
 	// keys to the resulting data or if there are no keys provided we add all
 	// keys of the secret.
+	// To support nested secret values we check the type of the value first. If
+	// The type is 'map[string]interface{}' we marshal the value to a JSON
+	// string, which can be used for the Kubernetes secret.
 	data := make(map[string][]byte)
 	for key, value := range secretData {
 		if len(keys) == 0 || contains(key, keys) {
-			if valueStr, ok := value.(string); ok {
-				log.Info(fmt.Sprintf("key: %s value: %s", key, valueStr))
-				data[key] = []byte(valueStr)
+			switch value.(type) {
+			case map[string]interface{}:
+				jsonString, err := json.Marshal(value)
+				if err != nil {
+					return nil, err
+				}
+
+				data[key] = []byte(jsonString)
+			case string:
+				data[key] = []byte(value.(string))
+			case json.Number:
+				data[key] = []byte(value.(json.Number))
+			case bool:
+				data[key] = []byte(fmt.Sprintf("%t", value.(bool)))
+			default:
+				return nil, ErrParseSecretValue
 			}
 		}
 	}
