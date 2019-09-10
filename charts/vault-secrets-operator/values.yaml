@@ -20,14 +20,16 @@ environmentVars: []
   #   secretName: vault-secrets-operator
   #   secretKey: VAULT_TOKEN_LEASE_DURATION
 
-# Set the address for vault and specify the authentication method for the operator.
-# Possible values are 'token' or 'kubernetes'. If the authentication method is 'kubernetes'
-# the Helm chart ensures that the Service Account included the needed rights. The default path
-# for the Kubernets Auth method is 'auth/kubernetes', if you enabled it under another path you
-# must change the 'kubernetesPath' value. You must also provide the role which should be used
-# for the authentication.
+# Set the address for vault (by default we assume you are running a dev
+# instance of vault in the same namespace as the operator) and specify the
+# authentication method for the operator.  Possible values are 'token' or
+# 'kubernetes'. If the authentication method is 'kubernetes' the Helm chart
+# ensures that the Service Account included the needed rights. The default path
+# for the Kubernets Auth method is 'auth/kubernetes', if you enabled it under
+# another path you must change the 'kubernetesPath' value. You must also
+# provide the role which should be used for the authentication.
 vault:
-  address: ""
+  address: "http://vault:8200"
   authMethod: token
   kubernetesPath: auth/kubernetes
   kubernetesRole: vault-secrets-operator
