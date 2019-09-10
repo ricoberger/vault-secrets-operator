@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/api"
@@ -162,29 +161,26 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 
-	// Check if the 'KV Secrets Engine - Version 1' is used for the provided
-	// secret. If the secret is stored in a KV2 secrets engine the path must
-	// contain a 'data' at the second position. If the path does not contain the
-	// 'data' part we add it.
-	if secretEngine == "kv2" {
-		pathParts := strings.Split(path, "/")
-		if len(pathParts) < 2 {
-			return nil, ErrInvalidPath
-		}
-
-		if pathParts[1] != "data" {
-			path = pathParts[0] + "/data/" + strings.Join(pathParts[1:], "/")
-		}
+	// Check if the KVv1 or KVv2 is used for the provided secret and determin
+	// the mount path of the secrets engine.
+	mountPath, v2, err := isKVv2(path)
+	if err != nil {
+		return nil, err
 	}
 
-	// Check if the secret engine is KV2. If yes, we also check if a version
-	// is provided (when not the version will be 0) and fill the request data
-	// with the version parameter. If the version is omitted or KV1 secret
-	// engine is used the ReadWithData acts like the Read method.
+	// If the KVv2 secrets engine is used we add the 'data' prefix to the
+	// secrets path. If a version is provided we fill the request data with the
+	// version parameter.
+	// NOTE: Without any request data the ReadWithData method will act like the
+	// Read method.
 	reqData := make(map[string][]string)
 
-	if secretEngine == "kv2" && version != 0 {
-		reqData["version"] = []string{strconv.Itoa(version)}
+	if v2 {
+		path = addPrefixToVKVPath(path, mountPath, "data")
+
+		if version > 0 {
+			reqData["version"] = []string{strconv.Itoa(version)}
+		}
 	}
 
 	secret, err := client.Logical().ReadWithData(path, reqData)
@@ -200,7 +196,7 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 	// secret. Next to the secret 'data' a KV2 secret contains also some
 	// 'metadata'. We only need the 'data' field to go on.
 	secretData := secret.Data
-	if secretEngine == "kv2" {
+	if v2 {
 		var ok bool
 		secretData, ok = secret.Data["data"].(map[string]interface{})
 		if !ok {
