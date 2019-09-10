@@ -192,8 +192,8 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 		return nil, ErrSecretIsNil
 	}
 
-	// The structure for a KV2 secret differs from the structure of a KV1
-	// secret. Next to the secret 'data' a KV2 secret contains also some
+	// The structure for a KVv2 secret differs from the structure of a KV1
+	// secret. Next to the secret 'data' a KVv2 secret contains also some
 	// 'metadata'. We only need the 'data' field to go on.
 	secretData := secret.Data
 	if v2 {
@@ -234,7 +234,7 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 	}
 
 	// If the data map is empty we return an error. This can happend, if the
-	// secret which was retrieved from Vault is under a KV2 secrets engine, but
+	// secret which was retrieved from Vault is under a KVv2 secrets engine, but
 	// the secret engine was not provided in the cr for the secret. Then the
 	// returned secret looks like this: &api.Secret{RequestID:\"be7b671f-a097-1081-15ec-b4710f2a6249\", LeaseID:\"\", LeaseDuration:0, Renewable:false, Data:map[string]interface {}(nil), Warnings:[]string{\"Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, use 'vault kv get' for this operation.\"}, Auth:(*api.SecretAuth)(nil), WrapInfo:(*api.SecretWrapInfo)(nil)}"}
 	if len(data) == 0 {
