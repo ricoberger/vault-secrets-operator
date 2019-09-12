@@ -1,5 +1,10 @@
 name: Docker
-on: [release]
+
+on:
+  push:
+    tags:
+      - '*'
+
 jobs:
   build-release:
     name: Release Docker Image
