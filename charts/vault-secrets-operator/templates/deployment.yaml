@@ -52,6 +52,10 @@ spec:
             - name: opmetrics
               containerPort: 8686
               protocol: TCP
+          {{- with .Values.image.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -62,15 +66,19 @@ spec:
               port: opmetrics
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-    {{- with .Values.affinity }}
+      {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
-    {{- end }}
-    {{- with .Values.tolerations }}
+      {{- end }}
+      {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
-    {{- end }}
+      {{- end }}

@@ -5,6 +5,7 @@ image:
   tag: 1.2.2
   pullPolicy: IfNotPresent
   args: []
+  volumeMounts: []
 
 imagePullSecrets: []
 nameOverride: ""
@@ -60,6 +61,8 @@ resources: {}
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+
+volumes: []
 
 nodeSelector: {}
 
