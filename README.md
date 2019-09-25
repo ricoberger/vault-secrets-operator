@@ -236,7 +236,7 @@ After modifying the `*_types.go` file always run the following command to update
 operator-sdk generate k8s
 ```
 
-To update the OpenAPI validation section in the CRD `deploy/crds/cache_v1alpha1_memcached_crd.yaml`, run the following command.
+To update the OpenAPI validation section in the CRD `deploy/crds/ricoberger_v1alpha1_vaultsecret_crd.yaml`, run the following command.
 
 ```sh
 operator-sdk generate openapi
