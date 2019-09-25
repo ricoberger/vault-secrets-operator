@@ -56,6 +56,7 @@ func CreateClient() error {
 	vaultAddress := os.Getenv("VAULT_ADDRESS")
 	vaultAuthMethod := os.Getenv("VAULT_AUTH_METHOD")
 	vaultToken := os.Getenv("VAULT_TOKEN")
+	vaultTokenPath := os.Getenv("VAULT_TOKEN_PATH")
 	vaultTokenLeaseDuration := os.Getenv("VAULT_TOKEN_LEASE_DURATION")
 	vaultKubernetesPath := os.Getenv("VAULT_KUBERNETES_PATH")
 	vaultKubernetesRole := os.Getenv("VAULT_KUBERNETES_ROLE")
@@ -86,11 +87,24 @@ func CreateClient() error {
 		// token. If the values are empty or the lease duration could not be
 		// parsed we return an error.
 		if vaultToken == "" {
-			return ErrMissingVaultToken
+			// If the token is not passed via environment variable we check if,
+			// we can load the token from a file. Therefor a volume must be
+			// mounted to the container and the path to the token must be
+			// provided.
+			if vaultTokenPath == "" {
+				return ErrMissingVaultToken
+			}
+
+			t, err := ioutil.ReadFile(vaultTokenPath)
+			if err != nil {
+				return err
+			}
+
+			vaultToken = string(t)
 		}
 
 		if vaultTokenLeaseDuration == "" {
-			return ErrMissingVaultToken
+			return ErrMissingVaultTokenLeaseDuration
 		}
 
 		if tokenLeaseDuration, err = strconv.Atoi(vaultTokenLeaseDuration); err != nil {
