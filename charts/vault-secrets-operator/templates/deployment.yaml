@@ -40,6 +40,8 @@ spec:
               value: {{ .Values.vault.address }}
             - name: VAULT_AUTH_METHOD
               value: {{ .Values.vault.authMethod }}
+            - name: VAULT_TOKEN_PATH
+              value: {{ .Values.vault.tokenPath }}
             - name: VAULT_KUBERNETES_PATH
               value: {{ .Values.vault.kubernetesPath }}
             - name: VAULT_KUBERNETES_ROLE

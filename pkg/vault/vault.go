@@ -104,7 +104,7 @@ func CreateClient() error {
 		}
 
 		if vaultTokenLeaseDuration == "" {
-			return ErrMissingVaultToken
+			return ErrMissingVaultTokenLeaseDuration
 		}
 
 		if tokenLeaseDuration, err = strconv.Atoi(vaultTokenLeaseDuration); err != nil {

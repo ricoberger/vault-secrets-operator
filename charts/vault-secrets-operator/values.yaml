@@ -29,9 +29,12 @@ environmentVars: []
 # for the Kubernets Auth method is 'auth/kubernetes', if you enabled it under
 # another path you must change the 'kubernetesPath' value. You must also
 # provide the role which should be used for the authentication.
+# If the auth method is 'token' you can specify the 'tokenPath' to read the
+# Vault token from an mounted volumn instead of an environment variable.
 vault:
   address: "http://vault:8200"
   authMethod: token
+  tokenPath: ""
   kubernetesPath: auth/kubernetes
   kubernetesRole: vault-secrets-operator
 
