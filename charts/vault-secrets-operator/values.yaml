@@ -37,6 +37,7 @@ vault:
   tokenPath: ""
   kubernetesPath: auth/kubernetes
   kubernetesRole: vault-secrets-operator
+  reconciliationTime: 0
 
 crd:
   create: true
