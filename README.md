@@ -266,6 +266,7 @@ export VAULT_ADDRESS=
 export VAULT_AUTH_METHOD=token
 export VAULT_TOKEN=
 export VAULT_TOKEN_LEASE_DURATION=
+export VAULT_RECONCILIATION_TIME=
 ```
 
 Run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:

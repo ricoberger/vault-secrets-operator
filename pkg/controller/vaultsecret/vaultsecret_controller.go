@@ -2,6 +2,7 @@ package vaultsecret
 
 import (
 	"context"
+	"time"
 
 	ricobergerv1alpha1 "github.com/ricoberger/vault-secrets-operator/pkg/apis/ricoberger/v1alpha1"
 	"github.com/ricoberger/vault-secrets-operator/pkg/vault"
@@ -104,6 +105,14 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, nil
 	}
 
+	// Set reconciliation if the vault-secret does not specify a version.
+	reconcileResult := reconcile.Result{}
+	if instance.Spec.Version == 0 && vault.ReconciliationTime > 0 {
+		reconcileResult = reconcile.Result{
+			RequeueAfter: time.Second * time.Duration(vault.ReconciliationTime),
+		}
+	}
+
 	// Define a new Secret object
 	secret := newSecretForCR(instance, data)
 
@@ -122,8 +131,8 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 			return reconcile.Result{}, err
 		}
 
-		// Secret created successfully - don't requeue
-		return reconcile.Result{}, nil
+		// Secret created successfully - requeue only if no version is specified
+		return reconcileResult, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -135,8 +144,8 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	// Secret updated successfully - don't requeue
-	return reconcile.Result{}, nil
+	// Secret updated successfully - requeue only if no version is specified
+	return reconcileResult, nil
 }
 
 // newSecretForCR returns a secret with the same name/namespace as the cr
