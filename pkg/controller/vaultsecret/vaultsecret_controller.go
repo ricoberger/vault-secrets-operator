@@ -101,8 +101,9 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 
 	data, err := vault.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version)
 	if err != nil {
+		// Error while getting the secret from Vault - requeue the request.
 		reqLogger.Error(err, "Could not get secret from vault")
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
 
 	// Set reconciliation if the vault-secret does not specify a version.
