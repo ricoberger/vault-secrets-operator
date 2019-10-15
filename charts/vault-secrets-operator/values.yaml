@@ -30,7 +30,10 @@ environmentVars: []
 # another path you must change the 'kubernetesPath' value. You must also
 # provide the role which should be used for the authentication.
 # If the auth method is 'token' you can specify the 'tokenPath' to read the
-# Vault token from an mounted volumn instead of an environment variable.
+# Vault token from a mounted volume instead of an environment variable.
+# The reconciliationTime value determines after which time the Vault secret is
+# processed again. This can be used to update a the Kubernetes secret, when the
+# Vault secret changes. A value of 0 will disable the automatic update.
 vault:
   address: "http://vault:8200"
   authMethod: token
