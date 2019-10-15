@@ -47,7 +47,7 @@ spec:
             - name: VAULT_KUBERNETES_ROLE
               value: {{ .Values.vault.kubernetesRole }}
             - name: VAULT_RECONCILIATION_TIME
-              value: {{ .Values.vault.reconciliationTime }}
+              value: {{ .Values.vault.reconciliationTime | quote }}
             {{- include "vault-secrets-operator.environmentVars" .Values | nindent 12 }}
           ports:
             - name: metrics
