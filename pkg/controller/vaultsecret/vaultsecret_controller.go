@@ -85,6 +85,14 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling VaultSecret")
 
+	// Set reconciliation if the vault-secret does not specify a version.
+	reconcileResult := reconcile.Result{}
+	if vault.ReconciliationTime > 0 {
+		reconcileResult = reconcile.Result{
+			RequeueAfter: time.Second * time.Duration(vault.ReconciliationTime),
+		}
+	}
+
 	// Fetch the VaultSecret instance
 	instance := &ricobergerv1alpha1.VaultSecret{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -104,14 +112,6 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 		// Error while getting the secret from Vault - requeue the request.
 		reqLogger.Error(err, "Could not get secret from vault")
 		return reconcile.Result{}, err
-	}
-
-	// Set reconciliation if the vault-secret does not specify a version.
-	reconcileResult := reconcile.Result{}
-	if instance.Spec.Version == 0 && vault.ReconciliationTime > 0 {
-		reconcileResult = reconcile.Result{
-			RequeueAfter: time.Second * time.Duration(vault.ReconciliationTime),
-		}
 	}
 
 	// Define a new Secret object
