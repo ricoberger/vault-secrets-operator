@@ -4,7 +4,7 @@
 | ----- | ----------- | ------- |
 | `replicaCount` | Number of replications which should be created. | `1` |
 | `image.repository` | The repository of the Docker image. | `ricoberger/vault-secrets-operator` |
-| `image.tag` | The tag of the Docker image which should be used. | `1.2.3` |
+| `image.tag` | The tag of the Docker image which should be used. | `1.3.0` |
 | `image.pullPolicy` | The pull policy for the Docker image, | `IfNotPresent` |
 | `image.args` | Command-line arguments which should be passed to the container. This can be used to configure the logging. | `[]` |
 | `image.volumeMounts` | Mount additional volumns to the container. | `[]` |
