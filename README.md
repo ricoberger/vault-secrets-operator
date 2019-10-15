@@ -226,7 +226,7 @@ metadata:
 type: Opaque
 ```
 
-The `spec.type` and `spec.keys` fields are handled in the same way for both versions of the KV secret engine. The `spec.version` field is only processed, when the secret is saved under a KVv2 secret engine.
+The `spec.type` and `spec.keys` fields are handled in the same way for both versions of the KV secret engine. The `spec.version` field is only processed, when the secret is saved under a KVv2 secret engine. If you specified the `VAULT_RECONCILIATION_TIME` environment variable with a value greater than `0` every secret is reconciled after the given time. This means, when you do not specify `spec.version`, the Kubernetes secret will be automatically updated if the Vault secret changes.
 
 ## Development
 
@@ -266,6 +266,7 @@ export VAULT_ADDRESS=
 export VAULT_AUTH_METHOD=token
 export VAULT_TOKEN=
 export VAULT_TOKEN_LEASE_DURATION=
+export VAULT_RECONCILIATION_TIME=
 ```
 
 Run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:

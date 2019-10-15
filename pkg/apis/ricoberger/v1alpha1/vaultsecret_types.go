@@ -28,7 +28,9 @@ type VaultSecretSpec struct {
 	Type corev1.SecretType `json:"type"`
 	// Version sets the version of the secret which should be used. The version
 	// is only used if the KVv2 secret engine is used. If the version is
-	// omitted the Operator uses the latest version of the secret.
+	// omitted the Operator uses the latest version of the secret. If the version
+	// omitted and the VAULT_RECONCILIATION_TIME environment variable is set, the
+	// Kubernetes secret will be updated if the Vault secret changes.
 	Version int `json:"version,omitempty"`
 }
 

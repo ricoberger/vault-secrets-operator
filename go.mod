@@ -1,7 +1,6 @@
 module github.com/ricoberger/vault-secrets-operator
 
 require (
-	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/go-openapi/spec v0.19.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/operator-framework/operator-sdk v0.10.1-0.20190820174346-abac23c897b8
@@ -34,4 +33,4 @@ replace (
 
 replace github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.10.0
 
-replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
+go 1.13

@@ -40,6 +40,9 @@ var (
 	// ErrParseSecretValue is our error if the returned secret data is invalid.
 	ErrParseSecretValue = errors.New("could not parse secret value")
 
+	// ReconciliationTime specify the time in seconds after a vault secret is reconciled.
+	ReconciliationTime int
+
 	// log is our customized logger.
 	log = logf.Log.WithName("vault")
 
@@ -60,10 +63,20 @@ func CreateClient() error {
 	vaultTokenLeaseDuration := os.Getenv("VAULT_TOKEN_LEASE_DURATION")
 	vaultKubernetesPath := os.Getenv("VAULT_KUBERNETES_PATH")
 	vaultKubernetesRole := os.Getenv("VAULT_KUBERNETES_ROLE")
+	reconciliationTime := os.Getenv("VAULT_RECONCILIATION_TIME")
 
 	// Validate that the Vault address is set.
 	if vaultAddress == "" {
 		return ErrMissingVaultAddress
+	}
+
+	// Parse the environment variable for the reconciliation time. If the time is not specify we set it to 0.
+	// If the reconciliation time is 0 we skip the reconciliation of a vault secret.
+	if ReconciliationTime, err = strconv.Atoi(reconciliationTime); err != nil {
+		log.WithValues("ReconciliationTime", 0).Info("Reconciliation will be skipped because it is 0.")
+		ReconciliationTime = 0
+	} else {
+		log.WithValues("ReconciliationTime", ReconciliationTime).Info("Reconciliation is enabled.")
 	}
 
 	// Create new Vault configuration. This configuration is used to create the

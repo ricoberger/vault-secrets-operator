@@ -2,6 +2,7 @@ package vaultsecret
 
 import (
 	"context"
+	"time"
 
 	ricobergerv1alpha1 "github.com/ricoberger/vault-secrets-operator/pkg/apis/ricoberger/v1alpha1"
 	"github.com/ricoberger/vault-secrets-operator/pkg/vault"
@@ -84,6 +85,14 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling VaultSecret")
 
+	// Set reconciliation if the vault-secret does not specify a version.
+	reconcileResult := reconcile.Result{}
+	if vault.ReconciliationTime > 0 {
+		reconcileResult = reconcile.Result{
+			RequeueAfter: time.Second * time.Duration(vault.ReconciliationTime),
+		}
+	}
+
 	// Fetch the VaultSecret instance
 	instance := &ricobergerv1alpha1.VaultSecret{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -100,8 +109,9 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 
 	data, err := vault.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version)
 	if err != nil {
+		// Error while getting the secret from Vault - requeue the request.
 		reqLogger.Error(err, "Could not get secret from vault")
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
 
 	// Define a new Secret object
@@ -122,8 +132,8 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 			return reconcile.Result{}, err
 		}
 
-		// Secret created successfully - don't requeue
-		return reconcile.Result{}, nil
+		// Secret created successfully - requeue only if no version is specified
+		return reconcileResult, nil
 	} else if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -135,8 +145,8 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	// Secret updated successfully - don't requeue
-	return reconcile.Result{}, nil
+	// Secret updated successfully - requeue only if no version is specified
+	return reconcileResult, nil
 }
 
 // newSecretForCR returns a secret with the same name/namespace as the cr

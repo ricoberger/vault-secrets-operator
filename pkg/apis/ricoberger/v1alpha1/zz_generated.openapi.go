@@ -103,7 +103,7 @@ func schema_pkg_apis_ricoberger_v1alpha1_VaultSecretSpec(ref common.ReferenceCal
 					},
 					"version": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Version sets the version of the secret which should be used. The version is only used if the KVv2 secret engine is used. If the version is omitted the Operator uses the latest version of the secret.",
+							Description: "Version sets the version of the secret which should be used. The version is only used if the KVv2 secret engine is used. If the version is omitted the Operator uses the latest version of the secret. If the version omitted and the VAULT_RECONCILIATION_TIME environment variable is set, the Kubernetes secret will be updated if the Vault secret changes.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

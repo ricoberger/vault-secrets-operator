@@ -17,6 +17,7 @@
 | `vault.tokenPath` | Path to file with the Vault token if the used auth method is `token`. Can be used to read the token from a file and not from the  `VAULT_TOKEN` environment variable. | `""` |
 | `vault.kubernetesPath` | If the Kubernetes auth method is used, this is the path where the Kubernetes auth method is enabled. | `auth/kubernetes` |
 | `vault.kubernetesRole` | The name of the role which is configured for the Kubernetes auth method. | `vault-secrets-operator` |
+| `vault.reconciliationTime` | The time after which the reconcile function for the CR is rerun. If the value is 0, automatic reconciliation is skipped. | `0` |
 | `crd.create` | Create the custom resource definition. | `true` |
 | `rbac.create` | Create the cluster role and cluster role bindings. | `true` |
 | `serviceAccount.create` | Create the service account. | `true` |
