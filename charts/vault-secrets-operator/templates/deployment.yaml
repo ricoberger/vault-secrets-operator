@@ -37,17 +37,17 @@ spec:
             - name: OPERATOR_NAME
               value: "vault-secrets-operator"
             - name: VAULT_ADDRESS
-              value: {{ .Values.vault.address }}
+              value: {{ .Values.vault.address | quote }}
             - name: VAULT_AUTH_METHOD
-              value: {{ .Values.vault.authMethod }}
+              value: {{ .Values.vault.authMethod | quote }}
             - name: VAULT_TOKEN_PATH
-              value: {{ .Values.vault.tokenPath }}
+              value: {{ .Values.vault.tokenPath | quote }}
             - name: VAULT_KUBERNETES_PATH
-              value: {{ .Values.vault.kubernetesPath }}
+              value: {{ .Values.vault.kubernetesPath | quote }}
             - name: VAULT_KUBERNETES_ROLE
-              value: {{ .Values.vault.kubernetesRole }}
+              value: {{ .Values.vault.kubernetesRole | quote }}
             - name: VAULT_RECONCILIATION_TIME
-              value: {{ .Values.vault.reconciliationTime }}
+              value: {{ .Values.vault.reconciliationTime | quote }}
             {{- include "vault-secrets-operator.environmentVars" .Values | nindent 12 }}
           ports:
             - name: metrics
