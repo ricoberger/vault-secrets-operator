@@ -1,4 +1,5 @@
 replicaCount: 1
+deploymentStrategy: {}
 
 image:
   repository: ricoberger/vault-secrets-operator

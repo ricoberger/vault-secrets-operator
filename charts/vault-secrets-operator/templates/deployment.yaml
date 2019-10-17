@@ -6,6 +6,10 @@ metadata:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  {{- with .Values.deploymentStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "vault-secrets-operator.name" . }}
@@ -16,10 +20,10 @@ spec:
         app.kubernetes.io/name: {{ include "vault-secrets-operator.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
-    {{- with .Values.imagePullSecrets }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
-    {{- end }}
+      {{- end }}
       serviceAccountName: {{ template "vault-secrets-operator.serviceAccountName" . }}
       containers:
         - name: {{ .Chart.Name }}
