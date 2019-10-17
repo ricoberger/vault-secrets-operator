@@ -63,9 +63,9 @@ Inject extra environment variables populated by secrets, if populated.
 {{- range .environmentVars }}
 - name: {{ .envName }}
   valueFrom:
-   secretKeyRef:
-     name: {{ .secretName }}
-     key: {{ .secretKey }}
+    secretKeyRef:
+      name: {{ .secretName }}
+      key: {{ .secretKey }}
 {{- end -}}
 {{- end -}}
 {{- end -}}
