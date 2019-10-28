@@ -33,7 +33,7 @@ spec:
             {{- toYaml .Values.image.args | nindent 12 }}
           env:
             - name: WATCH_NAMESPACE
-              value: ""
+              value: {{ .Values.vault.namespaces | quote }}
             - name: POD_NAME
               valueFrom:
                 fieldRef:

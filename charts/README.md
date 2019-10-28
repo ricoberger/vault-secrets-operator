@@ -19,6 +19,7 @@
 | `vault.kubernetesPath` | If the Kubernetes auth method is used, this is the path where the Kubernetes auth method is enabled. | `auth/kubernetes` |
 | `vault.kubernetesRole` | The name of the role which is configured for the Kubernetes auth method. | `vault-secrets-operator` |
 | `vault.reconciliationTime` | The time after which the reconcile function for the CR is rerun. If the value is 0, automatic reconciliation is skipped. | `0` |
+| `vault.namespaces` | Comma serpareted list of namespaces the operator will watch. If empty the operator will watch all namespaces. | `""` |
 | `crd.create` | Create the custom resource definition. | `true` |
 | `rbac.create` | Create the cluster role and cluster role bindings. | `true` |
 | `serviceAccount.create` | Create the service account. | `true` |

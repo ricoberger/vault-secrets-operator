@@ -35,6 +35,9 @@ environmentVars: []
 # The reconciliationTime value determines after which time the Vault secret is
 # processed again. This can be used to update a the Kubernetes secret, when the
 # Vault secret changes. A value of 0 will disable the automatic update.
+# You can specify all namespaces the operator should watch. Therefor pass a
+# comma separated list via the namespaces value. If the value is empty the operator
+# will watch all namespaces.
 vault:
   address: "http://vault:8200"
   authMethod: token
@@ -42,6 +45,7 @@ vault:
   kubernetesPath: auth/kubernetes
   kubernetesRole: vault-secrets-operator
   reconciliationTime: 0
+  namespaces: ""
 
 crd:
   create: true
