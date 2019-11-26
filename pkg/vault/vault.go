@@ -1,17 +1,17 @@
 package vault
 
 import (
+	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/api"
 	"io/ioutil"
 	"net/http"
 	"os"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
 	"time"
-
-	"github.com/hashicorp/vault/api"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
@@ -184,7 +184,7 @@ func RenewToken() {
 }
 
 // GetSecret returns the value for a given secret.
-func GetSecret(secretEngine string, path string, keys []string, version int) (map[string][]byte, error) {
+func GetSecret(secretEngine string, path string, keys []string, version int, binary bool) (map[string][]byte, error) {
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 
@@ -230,6 +230,7 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 			return nil, ErrParseSecret
 		}
 	}
+	log.Info("GetSecret: Get data from vault", "secretData is ", secretData)
 
 	// Convert the secret data for a Kubernetes secret. We only add the provided
 	// keys to the resulting data or if there are no keys provided we add all
@@ -246,10 +247,13 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 				if err != nil {
 					return nil, err
 				}
-
 				data[key] = []byte(jsonString)
 			case string:
-				data[key] = []byte(value.(string))
+				if binary {
+					data[key], err = b64.StdEncoding.DecodeString(value.(string))
+				} else {
+					data[key] = []byte(value.(string))
+				}
 			case json.Number:
 				data[key] = []byte(value.(json.Number))
 			case bool:
@@ -260,6 +264,8 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 		}
 	}
 
+	log.Info("GetSecret end of switch: value got type of map !!!!!!!", "data is ", data)
+
 	// If the data map is empty we return an error. This can happend, if the
 	// secret which was retrieved from Vault is under a KVv2 secrets engine, but
 	// the secret engine was not provided in the cr for the secret. Then the
@@ -267,7 +273,6 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 	if len(data) == 0 {
 		return nil, ErrInvalidSecretData
 	}
-
 	return data, nil
 }
 

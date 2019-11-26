@@ -2,7 +2,7 @@ replicaCount: 1
 deploymentStrategy: {}
 
 image:
-  repository: ricoberger/vault-secrets-operator
+  repository: siweiwang/vault-secrets-operator
   tag: 1.4.0
   pullPolicy: IfNotPresent
   args: []
@@ -12,7 +12,7 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-environmentVars: []
+environmentVars:
   # Set environment variables from a secret. This must be done, if you use the
   # Token Auth Method of Vault.
   # - envName: VAULT_TOKEN
