@@ -32,6 +32,13 @@ type VaultSecretSpec struct {
 	// omitted and the VAULT_RECONCILIATION_TIME environment variable is set, the
 	// Kubernetes secret will be updated if the Vault secret changes.
 	Version int `json:"version,omitempty"`
+	// isBinary is a flag indicates if data stored in vault is
+	// binary data. Since vault does not store binary data natively,
+	// the binary data is stored as base64 encoded. However, same data get encoded
+	// again when operator stored them as secret in k8s which caused the data to
+	// get double encoded. This flag will skip the base64 encode which is needed
+	// for string data to avoid the double encode problem.
+	IsBinary bool `json:"isBinary,omitempty"`
 }
 
 // VaultSecretStatus defines the observed state of VaultSecret

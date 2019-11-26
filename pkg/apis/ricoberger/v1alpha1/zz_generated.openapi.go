@@ -108,6 +108,13 @@ func schema_pkg_apis_ricoberger_v1alpha1_VaultSecretSpec(ref common.ReferenceCal
 							Format:      "int32",
 						},
 					},
+					"isBinary": {
+						SchemaProps: spec.SchemaProps{
+							Description: "isBinary is a flag indicates if data stored in vault is binary data. This flag will skip the base64 encode which is needed for string data to avoid the double encode problem.",
+							Type:        []string{"bool"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"path", "type"},
 			},

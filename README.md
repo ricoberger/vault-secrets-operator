@@ -228,6 +228,46 @@ type: Opaque
 
 The `spec.type` and `spec.keys` fields are handled in the same way for both versions of the KV secret engine. The `spec.version` field is only processed, when the secret is saved under a KVv2 secret engine. If you specified the `VAULT_RECONCILIATION_TIME` environment variable with a value greater than `0` every secret is reconciled after the given time. This means, when you do not specify `spec.version`, the Kubernetes secret will be automatically updated if the Vault secret changes.
 
+The binary data stored in vault requires [base64 encoding](https://github.com/hashicorp/vault/issues/1423#issuecomment-219525845). the
+`spec.isBinary` can be used to prevent such data get base64 encoded again when store as secret in k8s.
+
+For example, let's set `foo` to the `bar` in base64 encoded format (i.e. YmFyCg==).
+
+```sh
+vault kv put kvv1/example-vaultsecret foo=YmFyCg==
+```
+
+You can specify `spec.isBinary` to indicate this is a binary data which is already in base64 encoded format:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: kvv1-example-vaultsecret
+spec:
+  keys:
+    - foo
+  isBinary: true
+  path: kvv1/example-vaultsecret
+  type: Opaque
+```
+
+The resulting Kubernetes secret will be:
+
+```yaml
+apiVersion: v1
+data:
+  foo: YmFyCg==
+kind: Secret
+metadata:
+  labels:
+    created-by: vault-secrets-operator
+  name: kvv2-example-vaultsecret
+type: Opaque
+```
+
+the value for `foo` stays as `YmFyCg==` which does not get base64 encoded again.
+
 ## Development
 
 After modifying the `*_types.go` file always run the following command to update the generated code for that resource type:
