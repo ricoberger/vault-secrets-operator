@@ -1,17 +1,17 @@
 package vault
 
 import (
+	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/api"
 	"io/ioutil"
 	"net/http"
 	"os"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
 	"time"
-
-	"github.com/hashicorp/vault/api"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
@@ -184,7 +184,7 @@ func RenewToken() {
 }
 
 // GetSecret returns the value for a given secret.
-func GetSecret(secretEngine string, path string, keys []string, version int) (map[string][]byte, error) {
+func GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool) (map[string][]byte, error) {
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 
@@ -246,10 +246,16 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 				if err != nil {
 					return nil, err
 				}
-
 				data[key] = []byte(jsonString)
 			case string:
-				data[key] = []byte(value.(string))
+				if isBinary {
+					data[key], err = b64.StdEncoding.DecodeString(value.(string))
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					data[key] = []byte(value.(string))
+				}
 			case json.Number:
 				data[key] = []byte(value.(json.Number))
 			case bool:
@@ -267,7 +273,6 @@ func GetSecret(secretEngine string, path string, keys []string, version int) (ma
 	if len(data) == 0 {
 		return nil, ErrInvalidSecretData
 	}
-
 	return data, nil
 }
 

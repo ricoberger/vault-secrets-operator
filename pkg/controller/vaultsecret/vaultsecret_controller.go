@@ -95,6 +95,7 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 
 	// Fetch the VaultSecret instance
 	instance := &ricobergerv1alpha1.VaultSecret{}
+
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -107,7 +108,7 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	data, err := vault.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version)
+	data, err := vault.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary)
 	if err != nil {
 		// Error while getting the secret from Vault - requeue the request.
 		reqLogger.Error(err, "Could not get secret from vault")
