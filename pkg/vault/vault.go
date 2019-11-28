@@ -230,7 +230,6 @@ func GetSecret(secretEngine string, path string, keys []string, version int, isB
 			return nil, ErrParseSecret
 		}
 	}
-	log.Info("GetSecret: Get data from vault", "secretData is ", secretData)
 
 	// Convert the secret data for a Kubernetes secret. We only add the provided
 	// keys to the resulting data or if there are no keys provided we add all
@@ -251,6 +250,9 @@ func GetSecret(secretEngine string, path string, keys []string, version int, isB
 			case string:
 				if isBinary {
 					data[key], err = b64.StdEncoding.DecodeString(value.(string))
+					if err != nil {
+						return nil, err
+					}
 				} else {
 					data[key] = []byte(value.(string))
 				}
@@ -263,8 +265,6 @@ func GetSecret(secretEngine string, path string, keys []string, version int, isB
 			}
 		}
 	}
-
-	log.Info("GetSecret end of switch: value got type of map !!!!!!!", "data is ", data)
 
 	// If the data map is empty we return an error. This can happend, if the
 	// secret which was retrieved from Vault is under a KVv2 secrets engine, but
