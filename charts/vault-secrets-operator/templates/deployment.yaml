@@ -54,6 +54,9 @@ spec:
               value: {{ .Values.vault.reconciliationTime | quote }}
             {{- include "vault-secrets-operator.environmentVars" .Values | nindent 12 }}
           ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
             - name: metrics
               containerPort: 8383
               protocol: TCP
@@ -66,12 +69,12 @@ spec:
           {{- end }}
           livenessProbe:
             httpGet:
-              path: /healthz
-              port: opmetrics
+              path: /livenessProbe
+              port: http
           readinessProbe:
             httpGet:
-              path: /healthz
-              port: opmetrics
+              path: /readinessProbe
+              port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.volumes }}

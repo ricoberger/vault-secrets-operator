@@ -25,6 +25,7 @@
 | `serviceAccount.create` | Create the service account. | `true` |
 | `serviceAccount.name` | The name of the service account, which should be created/used by the operator. | `vault-secrets-operator` |
 | `service.type` | Type of the service, whiche should be created. | `ClusterIP` |
+| `service.httpPort` | Port for the HTTP server for readiness and liveness probes. | `8080` |
 | `service.metricsPort` | Port for the metrics. | `8383` |
 | `service.operatorMetricsPort` | Port for the operator metrics. | `8686` |
 | `resources` | Set resources for the operator. | `{}` |
