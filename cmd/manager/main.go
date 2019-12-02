@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"runtime"
 	"strings"
@@ -36,6 +37,8 @@ import (
 
 // Change below variables to serve metrics on different host or port.
 var (
+	httpHost                  = "0.0.0.0"
+	httpPort                  = 8080
 	metricsHost               = "0.0.0.0"
 	metricsPort         int32 = 8383
 	operatorMetricsPort int32 = 8686
@@ -85,6 +88,32 @@ func main() {
 		log.Error(err, "Could not create API client for Vault")
 		os.Exit(1)
 	}
+
+	// Start HTTP server for liveness and readiness probes. If the HTTP server
+	// is running the liveness probe will return true. If the lookup of the
+	// Vault token fails the readiness probe also fails. So CRs will only
+	// processed if a valid token is passed to the operator.
+	go func() {
+		http.HandleFunc("/livenessProbe", func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "OK")
+		})
+
+		http.HandleFunc("/readinessProbe", func(w http.ResponseWriter, r *http.Request) {
+			err := vault.LookupToken()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			fmt.Fprintf(w, "OK")
+		})
+
+		err := http.ListenAndServe(fmt.Sprintf("%s:%d", httpHost, httpPort), nil)
+		if err != nil {
+			log.Error(err, "HTTP server died unexpectedly")
+			os.Exit(1)
+		}
+	}()
 
 	go vault.RenewToken()
 
