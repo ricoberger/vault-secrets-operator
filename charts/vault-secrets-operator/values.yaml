@@ -59,6 +59,7 @@ serviceAccount:
 
 service:
   type: ClusterIP
+  httpPort: 8080
   metricsPort: 8383
   operatorMetricsPort: 8686
 

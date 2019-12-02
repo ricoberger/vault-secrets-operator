@@ -168,6 +168,17 @@ func CreateClient() error {
 	return nil
 }
 
+// LookupToken displays information about a token. It's mainly used for the
+// readiness probe of the operator.
+func LookupToken() error {
+	_, err := client.Auth().Token().Lookup(client.Token())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RenewToken renews the provided token after the half of the lease duration is
 // passed.
 func RenewToken() {
