@@ -171,7 +171,7 @@ func CreateClient() error {
 // LookupToken displays information about a token. It's mainly used for the
 // readiness probe of the operator.
 func LookupToken() error {
-	_, err := client.Auth().Token().Lookup(client.Token())
+	_, err := client.Auth().Token().LookupSelf()
 	if err != nil {
 		return err
 	}
