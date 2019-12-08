@@ -1,17 +1,20 @@
 package vault
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/api"
 	"io/ioutil"
 	"net/http"
 	"os"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
 	"time"
+
+	"github.com/hashicorp/vault/api"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
@@ -39,6 +42,8 @@ var (
 	ErrInvalidSecretData = errors.New("invalid secret data")
 	// ErrParseSecretValue is our error if the returned secret data is invalid.
 	ErrParseSecretValue = errors.New("could not parse secret value")
+	// ErrNoCertsFound is our error if there is no cert in the provided environment variable.
+	ErrNoCertsFound = errors.New("no certs found in root CA file")
 
 	// ReconciliationTime specify the time in seconds after a vault secret is reconciled.
 	ReconciliationTime int
@@ -65,6 +70,12 @@ func CreateClient() error {
 	vaultKubernetesRole := os.Getenv("VAULT_KUBERNETES_ROLE")
 	reconciliationTime := os.Getenv("VAULT_RECONCILIATION_TIME")
 
+	caCert := os.Getenv("VAULT_CACERT")
+	clientCert := os.Getenv("VAULT_CLIENT_CERT")
+	clientKey := os.Getenv("VAULT_CLIENT_KEY")
+	skipVerify := os.Getenv("VAULT_SKIP_VERIFY")
+	tlsServerName := os.Getenv("VAULT_TLS_SERVER_NAME")
+
 	// Validate that the Vault address is set.
 	if vaultAddress == "" {
 		return ErrMissingVaultAddress
@@ -82,12 +93,15 @@ func CreateClient() error {
 	// Create new Vault configuration. This configuration is used to create the
 	// API client. We set the timeout of the HTTP client to 10 seconds.
 	// See: https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779
-	config := &api.Config{
-		Address: vaultAddress,
-		HttpClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
+	config := api.DefaultConfig()
+	config.Address = vaultAddress
+
+	tlsConfig, err := createTLSConfig(caCert, clientCert, clientKey, skipVerify, tlsServerName)
+	if err != nil {
+		return err
 	}
+
+	config.HttpClient.Transport.(*http.Transport).TLSClientConfig = tlsConfig
 
 	client, err = api.NewClient(config)
 	if err != nil {
@@ -296,4 +310,36 @@ func contains(key string, keys []string) bool {
 	}
 
 	return false
+}
+
+func createTLSConfig(caCert, clientCert, clientKey, skipVerify, tlsServerName string) (*tls.Config, error) {
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		RootCAs: x509.NewCertPool(),
+	}
+
+	if caCert != "" {
+		if !tlsConfig.RootCAs.AppendCertsFromPEM([]byte(caCert)) {
+			return nil, ErrNoCertsFound
+		}
+	}
+
+	if clientCert != "" && clientKey != "" {
+		cert, err := tls.X509KeyPair([]byte(clientCert), []byte(clientKey))
+		if err != nil {
+			return nil, err
+		}
+
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	if skipVerify == "true" {
+		tlsConfig.InsecureSkipVerify = true
+	}
+
+	if tlsServerName != "" {
+		tlsConfig.ServerName = tlsServerName
+	}
+
+	return tlsConfig, nil
 }
