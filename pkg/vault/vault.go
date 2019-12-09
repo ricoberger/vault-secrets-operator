@@ -315,10 +315,11 @@ func contains(key string, keys []string) bool {
 func createTLSConfig(caCert, clientCert, clientKey, skipVerify, tlsServerName string) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
-		RootCAs: x509.NewCertPool(),
 	}
 
 	if caCert != "" {
+		tlsConfig.RootCAs = x509.NewCertPool()
+
 		if !tlsConfig.RootCAs.AppendCertsFromPEM([]byte(caCert)) {
 			return nil, ErrNoCertsFound
 		}
