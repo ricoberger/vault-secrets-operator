@@ -155,12 +155,20 @@ func newSecretForCR(cr *ricobergerv1alpha1.VaultSecret, data map[string][]byte) 
 	labels := map[string]string{
 		"created-by": "vault-secrets-operator",
 	}
+	for k, v := range cr.ObjectMeta.Labels{
+		labels[k] = v
+	}
+	annotations := map[string]string{}
+	for k, v := range cr.ObjectMeta.Annotations{
+		annotations[k] = v
+	}
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cr.Name,
 			Namespace: cr.Namespace,
 			Labels:    labels,
+			Annotations: annotations,
 		},
 		Data: data,
 		Type: cr.Spec.Type,
