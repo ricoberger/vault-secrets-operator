@@ -38,10 +38,27 @@ Common labels
 app.kubernetes.io/name: {{ include "vault-secrets-operator.name" . }}
 helm.sh/chart: {{ include "vault-secrets-operator.chart" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- if .Values.podLabels }}
+{{ toYaml .Values.podLabels }}
+{{- end }}
+{{- end -}}
+
+{{/*
+matchLabels
+*/}}
+{{- define "vault-secrets-operator.matchLabels" -}}
+app.kubernetes.io/name: {{ include "vault-secrets-operator.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}
+
+{{/*
+Additional pod annotations
+*/}}
+{{- define "vault-secrets-operator.annotations" -}}
+{{- if .Values.podAnnotations }}
+{{- toYaml .Values.podAnnotations }}
+{{- end }}
 {{- end -}}
 
 {{/*

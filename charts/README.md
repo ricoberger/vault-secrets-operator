@@ -28,6 +28,8 @@
 | `service.httpPort` | Port for the HTTP server for readiness and liveness probes. | `8080` |
 | `service.metricsPort` | Port for the metrics. | `8383` |
 | `service.operatorMetricsPort` | Port for the operator metrics. | `8686` |
+| `podAnnotations` | Annotations for vault-secrets-operator pod(s). | `{}` |
+| `podLabels` | Additional labels for the vault-secrets-operator pod(s). | `{}` |
 | `resources` | Set resources for the operator. | `{}` |
 | `volumes` | Provide additional volumns for the container. | `[]` |
 | `nodeSelector` | Set a node selector. | `{}` |
