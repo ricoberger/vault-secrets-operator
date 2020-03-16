@@ -262,7 +262,7 @@ kind: Secret
 metadata:
   labels:
     created-by: vault-secrets-operator
-  name: kvv2-example-vaultsecret
+  name: kvv1-example-vaultsecret
 type: Opaque
 ```
 
