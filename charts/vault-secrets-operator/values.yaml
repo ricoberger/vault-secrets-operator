@@ -7,6 +7,8 @@ image:
   pullPolicy: IfNotPresent
   args: []
   volumeMounts: []
+    # - name: ca
+    #   mountPath: "/etc/vault-secrets-operator"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -15,12 +17,15 @@ fullnameOverride: ""
 environmentVars: []
   # Set environment variables from a secret. This must be done, if you use the
   # Token Auth Method of Vault.
-  # - envName: VAULT_TOKEN
-  #   secretName: vault-secrets-operator
-  #   secretKey: VAULT_TOKEN
-  # - envName: VAULT_TOKEN_LEASE_DURATION
-  #   secretName: vault-secrets-operator
-  #   secretKey: VAULT_TOKEN_LEASE_DURATION
+  # - name: VAULT_TOKEN
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: vault-secrets-operator
+  #       key: VAULT_TOKEN
+  # - name: VAULT_TOKEN_LEASE_DURATION
+  #   value: "300"
+  # - name: VAULT_CACERT
+  #   value: "/etc/vault-secrets-operator/ca.pem"
 
 # Set the address for vault (by default we assume you are running a dev
 # instance of vault in the same namespace as the operator) and specify the
@@ -82,6 +87,12 @@ resources: {}
   #   memory: 128Mi
 
 volumes: []
+  # - name: ca
+  #   secret:
+  #     secretName: vault-secrets-operator-ca
+  #     items:
+  #       - key: ca.pem
+  #         path: ca.pem
 
 nodeSelector: {}
 
