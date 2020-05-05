@@ -58,7 +58,9 @@ spec:
               value: {{ .Values.vault.kubernetesRole | quote }}
             - name: VAULT_RECONCILIATION_TIME
               value: {{ .Values.vault.reconciliationTime | quote }}
-            {{- include "vault-secrets-operator.environmentVars" .Values | nindent 12 }}
+            {{- with .Values.environmentVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           ports:
             - name: http
               containerPort: 8080
