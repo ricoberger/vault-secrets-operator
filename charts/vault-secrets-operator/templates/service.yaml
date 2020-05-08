@@ -5,17 +5,13 @@ metadata:
   labels:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
   ports:
-    - port: {{ .Values.service.httpPort }}
-      targetPort: http
-      protocol: TCP
-      name: http
-    - port: {{ .Values.service.metricsPort }}
+    - port: 8383
       targetPort: metrics
       protocol: TCP
       name: metrics
-    - port: {{ .Values.service.operatorMetricsPort }}
+    - port: 8686
       targetPort: opmetrics
       protocol: TCP
       name: opmetrics

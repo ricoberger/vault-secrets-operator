@@ -24,14 +24,15 @@
 | `rbac.create` | Create the cluster role and cluster role bindings. | `true` |
 | `serviceAccount.create` | Create the service account. | `true` |
 | `serviceAccount.name` | The name of the service account, which should be created/used by the operator. | `vault-secrets-operator` |
-| `service.type` | Type of the service, whiche should be created. | `ClusterIP` |
-| `service.httpPort` | Port for the HTTP server for readiness and liveness probes. | `8080` |
-| `service.metricsPort` | Port for the metrics. | `8383` |
-| `service.operatorMetricsPort` | Port for the operator metrics. | `8686` |
 | `podAnnotations` | Annotations for vault-secrets-operator pod(s). | `{}` |
 | `podLabels` | Additional labels for the vault-secrets-operator pod(s). | `{}` |
 | `resources` | Set resources for the operator. | `{}` |
 | `volumes` | Provide additional volumns for the container. | `[]` |
 | `nodeSelector` | Set a node selector. | `{}` |
 | `tolerations` | Set tolerations. | `[]` |
-| `affinity` | Set the affinity. | `{}` |
+| `serviceMonitor.enabled` | Enable the creation of a ServiceMonitor for the Prometheus Operator. | `false` |
+| `serviceMonitor.labels` | Additional labels which should be set for the ServiceMonitor. | `{}` |
+| `serviceMonitor.interval` | Scrape interval. | `10s` |
+| `serviceMonitor.scrapeTimeout` | Scrape timeout. | `10s` |
+| `serviceMonitor.honorLabels` | Honor labels option. | `true` |
+| `serviceMonitor.relabelings` | Additional relabeling config for the ServiceMonitor. | `[]` |
