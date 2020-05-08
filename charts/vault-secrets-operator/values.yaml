@@ -62,12 +62,6 @@ serviceAccount:
   create: true
   name: vault-secrets-operator
 
-service:
-  type: ClusterIP
-  httpPort: 8080
-  metricsPort: 8383
-  operatorMetricsPort: 8686
-
 # Annotations for vault-secrets-operator pod(s).
 podAnnotations: {}
 
@@ -99,3 +93,11 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+serviceMonitor:
+  enabled: false
+  labels: {}
+  interval: 10s
+  scrapeTimeout: 10s
+  honorLabels: true
+  relabelings: []
