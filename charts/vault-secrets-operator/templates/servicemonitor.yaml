@@ -4,15 +4,15 @@ kind: ServiceMonitor
 metadata:
   name: {{ include "vault-secrets-operator.fullname" . }}
   labels:
-    {{ include "vault-secrets-operator.labels" . | indent 4 }}
-    {{- if .Values.serviceMonitor.labels }}
-      {{- toYaml .Values.serviceMonitor.labels | nindent 4 }}
-    {{- end }}
+{{ include "vault-secrets-operator.labels" . | indent 4 }}
+{{- if .Values.serviceMonitor.labels }}
+  {{- toYaml .Values.serviceMonitor.labels | nindent 4 }}
+{{- end }}
 spec:
   endpoints:
     - interval: {{ .Values.serviceMonitor.interval }}
       scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
-      port: 8383
+      port: metrics
       path: "/metrics"
       honorLabels: {{ .Values.serviceMonitor.honorLabels }}
       {{- if .Values.serviceMonitor.relabelings }}
@@ -21,7 +21,7 @@ spec:
       {{- end }}
     - interval: {{ .Values.serviceMonitor.interval }}
       scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
-      port: 8686
+      port: opmetrics
       path: "/metrics"
       honorLabels: {{ .Values.serviceMonitor.honorLabels }}
       {{- if .Values.serviceMonitor.relabelings }}
