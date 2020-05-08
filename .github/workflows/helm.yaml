@@ -23,7 +23,7 @@ jobs:
       run: git config --global user.email "mail@ricoberger.de" && git config --global user.name "ricoberger"
 
     - name: Package Helm chart
-      run: helm init --client-only && helm package ./charts/vault-secrets-operator
+      run: helm package ./charts/vault-secrets-operator
 
     - name: Clone Helm repository
       run: git clone https://github.com/ricoberger/helm-charts.git
