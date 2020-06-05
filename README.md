@@ -312,7 +312,7 @@ export VAULT_RECONCILIATION_TIME=
 Run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
 
 ```sh
-operator-sdk run local
+operator-sdk run local --watch-namespace="default"
 ```
 
 You can use a specific kubeconfig via the flag `--kubeconfig=<path/to/kubeconfig>`.
