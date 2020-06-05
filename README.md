@@ -276,10 +276,10 @@ After modifying the `*_types.go` file always run the following command to update
 operator-sdk generate k8s
 ```
 
-To update the OpenAPI validation section in the CRD `deploy/crds/ricoberger_v1alpha1_vaultsecret_crd.yaml`, run the following command.
+To update the CRD `deploy/crds/ricoberger.de_vaultsecrets_crd.yaml`, run the following command:
 
 ```sh
-operator-sdk generate openapi
+operator-sdk generate crds
 ```
 
 Create an example secret in Vault. Then apply the Custom Resource Definition for the Vault Secrets Operator and the example Custom Resource:
@@ -287,8 +287,8 @@ Create an example secret in Vault. Then apply the Custom Resource Definition for
 ```sh
 vault kv put kvv1/example-vaultsecret foo=bar
 
-kubectl apply -f deploy/crds/ricoberger_v1alpha1_vaultsecret_crd.yaml
-kubectl apply -f deploy/crds/ricoberger_v1alpha1_vaultsecret_cr.yaml
+kubectl apply -f deploy/crds/ricoberger.de_vaultsecrets_crd.yaml
+kubectl apply -f deploy/crds/ricoberger.de_v1alpha1_vaultsecret_cr.yaml
 ```
 
 ### Locally
@@ -312,7 +312,7 @@ export VAULT_RECONCILIATION_TIME=
 Run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
 
 ```sh
-operator-sdk up local --namespace=default
+operator-sdk run local --watch-namespace="default"
 ```
 
 You can use a specific kubeconfig via the flag `--kubeconfig=<path/to/kubeconfig>`.
