@@ -140,10 +140,22 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	// Secret already exists, update the secret
-	reqLogger.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-	err = r.client.Update(context.TODO(), secret)
-	if err != nil {
-		return reconcile.Result{}, err
+	// Merge -> Checks the existing data keys and merge them into the updated secret
+	// Replace -> Do not check the data keys and replace the secret
+	if instance.Spec.ReconcileStrategy == "Merge" {
+		secret = mergeSecretData(secret, found)
+
+		reqLogger.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+		err = r.client.Update(context.TODO(), secret)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	} else {
+		reqLogger.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+		err = r.client.Update(context.TODO(), secret)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Secret updated successfully - requeue only if no version is specified
@@ -155,22 +167,32 @@ func newSecretForCR(cr *ricobergerv1alpha1.VaultSecret, data map[string][]byte) 
 	labels := map[string]string{
 		"created-by": "vault-secrets-operator",
 	}
-	for k, v := range cr.ObjectMeta.Labels{
+	for k, v := range cr.ObjectMeta.Labels {
 		labels[k] = v
 	}
 	annotations := map[string]string{}
-	for k, v := range cr.ObjectMeta.Annotations{
+	for k, v := range cr.ObjectMeta.Annotations {
 		annotations[k] = v
 	}
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name,
-			Namespace: cr.Namespace,
-			Labels:    labels,
+			Name:        cr.Name,
+			Namespace:   cr.Namespace,
+			Labels:      labels,
 			Annotations: annotations,
 		},
 		Data: data,
 		Type: cr.Spec.Type,
 	}
+}
+
+func mergeSecretData(new, found *corev1.Secret) *corev1.Secret {
+	for key, value := range found.Data {
+		if _, ok := new.Data[key]; !ok {
+			new.Data[key] = value
+		}
+	}
+
+	return new
 }
