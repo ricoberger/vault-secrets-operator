@@ -11,6 +11,11 @@ import (
 // VaultSecretSpec defines the desired state of VaultSecret
 // +k8s:openapi-gen=true
 type VaultSecretSpec struct {
+	// ReconcileStrategy defines the strategy for reconcilation. The default value is "Replace", which replaces any
+	// existing data keys in a secret with the loaded keys from Vault. The second valid value is "Merge" wiche merges
+	// the loaded keys from Vault with the existing keys in a secret. Duplicated keys will be replaced with the value
+	// from Vault. Other values are not valid for this field.
+	ReconcileStrategy string `json:"reconcileStrategy,omitempty"`
 	// Keys is an array of Keys, which should be included in the Kubernetes
 	// secret. If the Keys field is ommitted all keys from the Vault secret will
 	// be included in the Kubernetes secret.

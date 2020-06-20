@@ -266,7 +266,9 @@ metadata:
 type: Opaque
 ```
 
-the value for `foo` stays as `YmFyCg==` which does not get base64 encoded again.
+The value for `foo` stays as `YmFyCg==` which does not get base64 encoded again.
+
+It is also possible to change the default reconciliation strategy from `Replace` to `Merge` via the `reconcileStrategy` key in the CRD. For the default `Replace` strategy the complete secret is replaced. If you have an existing secret you can choose the `Merge` strategy to add the keys from Vault to the existing secret.
 
 ## Development
 
@@ -312,7 +314,7 @@ export VAULT_RECONCILIATION_TIME=
 Run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
 
 ```sh
-operator-sdk run local --watch-namespace="default"
+operator-sdk run local --watch-namespace=""
 ```
 
 You can use a specific kubeconfig via the flag `--kubeconfig=<path/to/kubeconfig>`.
