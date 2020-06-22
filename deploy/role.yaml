@@ -68,13 +68,7 @@ rules:
 - apiGroups:
   - ricoberger.de
   resources:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
+  - '*'
   verbs:
   - create
   - delete
