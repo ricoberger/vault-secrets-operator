@@ -3,7 +3,7 @@ deploymentStrategy: {}
 
 image:
   repository: ricoberger/vault-secrets-operator
-  tag: 1.7.0
+  tag: 1.7.1
   pullPolicy: IfNotPresent
   args: []
   volumeMounts: []
