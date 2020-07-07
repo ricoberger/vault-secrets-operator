@@ -75,12 +75,16 @@ This creates a secret named `vault-secrets-operator`. To use this secret in the 
 
 ```yaml
 environmentVars:
-  - envName: VAULT_TOKEN
-    secretName: vault-secrets-operator
-    secretKey: VAULT_TOKEN
-  - envName: VAULT_TOKEN_LEASE_DURATION
-    secretName: vault-secrets-operator
-    secretKey: VAULT_TOKEN_LEASE_DURATION
+  - name: VAULT_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: vault-secrets-operator
+        key: VAULT_TOKEN
+  - name: VAULT_TOKEN_LEASE_DURATION
+    valueFrom:
+      secretKeyRef:
+        name: vault-secrets-operator
+        key: VAULT_TOKEN_LEASE_DURATION
 ```
 
 #### Kubernetes Auth Method
