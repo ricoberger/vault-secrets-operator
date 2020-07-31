@@ -125,7 +125,7 @@ In the `values.yaml` add vault.authMethod=kubernetes. To configur the vault-secr
 
 ```yaml
 vault:
-      authMethod: kubernetes
+  authMethod: kubernetes
 ```
 
 ## Usage
