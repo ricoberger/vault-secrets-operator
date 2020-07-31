@@ -121,6 +121,13 @@ vault write auth/kubernetes/role/vault-secrets-operator \
   ttl=24h
 ```
 
+In the `values.yaml` add vault.authMethod=kubernetes. To configur the vault-secrets-operator to use the service account to authenticate instead of the default token method.
+
+```yaml
+vault:
+      authMethod: kubernetes
+```
+
 ## Usage
 
 Create two Vault secrets `example-vaultsecret`:
