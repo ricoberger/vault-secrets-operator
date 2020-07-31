@@ -121,6 +121,13 @@ vault write auth/kubernetes/role/vault-secrets-operator \
   ttl=24h
 ```
 
+When you deploy the Vault Secrets Operator via Helm chart you have to set the `vault.authMethod` property to `kubernetes` in the `values.yaml` file, to use the Kubernetes auth method instead of the default Token auth methods.
+
+```yaml
+vault:
+  authMethod: kubernetes
+```
+
 ## Usage
 
 Create two Vault secrets `example-vaultsecret`:
