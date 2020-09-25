@@ -174,17 +174,21 @@ func LookupToken() error {
 }
 
 // RenewToken renews the provided token after the half of the lease duration is
-// passed.
+// passed, retrying every 30 seconds in case of errors.
 func RenewToken() {
+	secondsUntilNextRenewalAttemptOnSuccess := float64(tokenLeaseDuration)*0.5
+	secondsUntilNextRenewalAttemptOnError := 30.0
+
 	for {
 		log.Info("Renew Vault token")
 
 		_, err := client.Auth().Token().RenewSelf(tokenLeaseDuration)
 		if err != nil {
 			log.Error(err, "Could not renew token")
+			time.Sleep(time.Duration(secondsUntilNextRenewalAttemptOnError) * time.Second)
+		} else {
+			time.Sleep(time.Duration(secondsUntilNextRenewalAttemptOnSuccess) * time.Second)
 		}
-
-		time.Sleep(time.Duration(float64(tokenLeaseDuration)*0.5) * time.Second)
 	}
 }
 
