@@ -49,6 +49,12 @@ var (
 
 	// tokenLeaseDuration is the lease duration of the token for the interaction with vault.
 	tokenLeaseDuration int
+
+	// tokenRenewalInterval is the time between two successive vault token renewals.
+	tokenRenewalInterval float64
+
+	// tokenRenewalRetryInterval is the time until a failed vault token renewal is retried.
+	tokenRenewalRetryInterval float64
 )
 
 // CreateClient creates a new Vault API client.
@@ -59,6 +65,8 @@ func CreateClient() error {
 	vaultToken := os.Getenv("VAULT_TOKEN")
 	vaultTokenPath := os.Getenv("VAULT_TOKEN_PATH")
 	vaultTokenLeaseDuration := os.Getenv("VAULT_TOKEN_LEASE_DURATION")
+	vaultTokenRenewalInterval := os.Getenv("VAULT_TOKEN_RENEWAL_INTERVAL")
+	vaultTokenRenewalRetryInterval := os.Getenv("VAULT_TOKEN_RENEWAL_RETRY_INTERVAL")
 	vaultKubernetesPath := os.Getenv("VAULT_KUBERNETES_PATH")
 	vaultKubernetesRole := os.Getenv("VAULT_KUBERNETES_ROLE")
 	reconciliationTime := os.Getenv("VAULT_RECONCILIATION_TIME")
@@ -116,6 +124,14 @@ func CreateClient() error {
 
 		if tokenLeaseDuration, err = strconv.Atoi(vaultTokenLeaseDuration); err != nil {
 			return err
+		}
+
+		if tokenRenewalInterval, err = strconv.ParseFloat(vaultTokenRenewalInterval, 64); err != nil {
+			tokenRenewalInterval = float64(tokenLeaseDuration)*0.5
+		}
+
+		if tokenRenewalRetryInterval, err = strconv.ParseFloat(vaultTokenRenewalRetryInterval, 64); err != nil {
+			tokenRenewalRetryInterval = 30.0
 		}
 
 		// Set the token, which should be used for the interaction with Vault.
@@ -176,18 +192,15 @@ func LookupToken() error {
 // RenewToken renews the provided token after the half of the lease duration is
 // passed, retrying every 30 seconds in case of errors.
 func RenewToken() {
-	secondsUntilNextRenewalAttemptOnSuccess := float64(tokenLeaseDuration)*0.5
-	secondsUntilNextRenewalAttemptOnError := 30.0
-
 	for {
 		log.Info("Renew Vault token")
 
 		_, err := client.Auth().Token().RenewSelf(tokenLeaseDuration)
 		if err != nil {
 			log.Error(err, "Could not renew token")
-			time.Sleep(time.Duration(secondsUntilNextRenewalAttemptOnError) * time.Second)
+			time.Sleep(time.Duration(tokenRenewalRetryInterval) * time.Second)
 		} else {
-			time.Sleep(time.Duration(secondsUntilNextRenewalAttemptOnSuccess) * time.Second)
+			time.Sleep(time.Duration(tokenRenewalInterval) * time.Second)
 		}
 	}
 }

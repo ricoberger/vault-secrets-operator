@@ -26,6 +26,10 @@ environmentVars: []
   #   value: "300"
   # - name: VAULT_CACERT
   #   value: "/etc/vault-secrets-operator/ca.pem"
+  # - name: VAULT_TOKEN_RENEWAL_INTERVAL
+  #   value: "43200"
+  # - name: VAULT_TOKEN_RENEWAL_RETRY_INTERVAL
+  #   value: "30"
 
 # Set the address for vault (by default we assume you are running a dev
 # instance of vault in the same namespace as the operator) and specify the

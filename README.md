@@ -53,7 +53,7 @@ To use Token auth method for the authentication against the Vault API, you need 
 vault token create -period=24h -policy=vault-secrets-operator
 ```
 
-To use the created token you need to pass the token as environment variable to the operator. For security reaseons the operator only supports the passing of environment variables via a Kubernetes secret. The secret with the keys `VAULT_TOKEN` and `VAULT_TOKEN_LEASE_DURATION` can be created with the following command:
+To use the created token you need to pass the token as an environment variable to the operator. For security reasons the operator only supports the passing of environment variables via a Kubernetes secret. The secret with the keys `VAULT_TOKEN` and `VAULT_TOKEN_LEASE_DURATION` (as well as optional keys `VAULT_TOKEN_RENEWAL_INTERVAL` and `VAULT_TOKEN_RENEWAL_RETRY_INTERVAL` to control timings for token renewals, if required) can be created with the following command:
 
 ```sh
 export VAULT_TOKEN=
