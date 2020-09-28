@@ -127,7 +127,7 @@ func CreateClient() error {
 		}
 
 		if tokenRenewalInterval, err = strconv.ParseFloat(vaultTokenRenewalInterval, 64); err != nil {
-			tokenRenewalInterval = float64(tokenLeaseDuration)*0.5
+			tokenRenewalInterval = float64(tokenLeaseDuration) * 0.5
 		}
 
 		if tokenRenewalRetryInterval, err = strconv.ParseFloat(vaultTokenRenewalRetryInterval, 64); err != nil {
@@ -170,6 +170,15 @@ func CreateClient() error {
 		}
 
 		tokenLeaseDuration = secret.Auth.LeaseDuration
+
+		if tokenRenewalInterval, err = strconv.ParseFloat(vaultTokenRenewalInterval, 64); err != nil {
+			tokenRenewalInterval = float64(tokenLeaseDuration) * 0.5
+		}
+
+		if tokenRenewalRetryInterval, err = strconv.ParseFloat(vaultTokenRenewalRetryInterval, 64); err != nil {
+			tokenRenewalRetryInterval = 30.0
+		}
+
 		client.SetToken(secret.Auth.ClientToken)
 	} else {
 		return ErrInvalidAuthMethod
