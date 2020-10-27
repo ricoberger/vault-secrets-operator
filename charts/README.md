@@ -21,7 +21,9 @@
 | `vault.reconciliationTime` | The time after which the reconcile function for the CR is rerun. If the value is 0, automatic reconciliation is skipped. | `0` |
 | `vault.namespaces` | Comma serpareted list of namespaces the operator will watch. If empty the operator will watch all namespaces. | `""` |
 | `crd.create` | Create the custom resource definition. | `true` |
-| `rbac.create` | Create the cluster role and cluster role bindings. | `true` |
+| `rbac.create` | Create RBAC object, enable ClusterRole and (Cluster)Role binding creation. | `true` |
+| `rbac.createclusterrole` | Finetune RBAC, enable or disable ClusterRole creation. NOTE: ignored when `rbac.create` not `true`. | `true` |
+| `rbac.namespaced` | Deploy in isolated namespace. Creates RoleBinding instead of a ClusterRoleBinding | `false` |
 | `serviceAccount.create` | Create the service account. | `true` |
 | `serviceAccount.name` | The name of the service account, which should be created/used by the operator. | `vault-secrets-operator` |
 | `podAnnotations` | Annotations for vault-secrets-operator pod(s). | `{}` |
