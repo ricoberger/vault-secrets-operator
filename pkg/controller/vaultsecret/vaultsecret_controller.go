@@ -1,7 +1,10 @@
 package vaultsecret
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"text/template"
 	"time"
 
 	ricobergerv1alpha1 "github.com/ricoberger/vault-secrets-operator/pkg/apis/ricoberger/v1alpha1"
@@ -162,6 +165,25 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 	return reconcileResult, nil
 }
 
+// runTemplate executes a template with the given secrets map, filled with the Vault secres
+func runTemplate(tmpl string, secrets map[string][]byte) ([]byte, error) {
+	sd := struct {
+		Vault map[string][]byte
+	}{
+		Vault: secrets,
+	}
+	t, err := template.New("data").Parse(tmpl)
+	if err != nil {
+		return nil, err
+	}
+	var bout bytes.Buffer
+	err = t.Execute(&bout, sd)
+	if err != nil {
+		return nil, err
+	}
+	return bout.Bytes(), nil
+}
+
 // newSecretForCR returns a secret with the same name/namespace as the cr
 func newSecretForCR(cr *ricobergerv1alpha1.VaultSecret, data map[string][]byte) *corev1.Secret {
 	labels := map[string]string{
@@ -174,7 +196,18 @@ func newSecretForCR(cr *ricobergerv1alpha1.VaultSecret, data map[string][]byte) 
 	for k, v := range cr.ObjectMeta.Annotations {
 		annotations[k] = v
 	}
-
+	if cr.Spec.Templates != nil {
+		newdata := make(map[string][]byte)
+		for tk, tv := range cr.Spec.Templates {
+			// Template 'tv'
+			if templated, terr := runTemplate(tv, data); terr == nil {
+				newdata[tk] = templated
+			} else {
+				newdata[tk] = []byte(fmt.Sprintf("# Template ERROR: %s", terr))
+			}
+		}
+		data = newdata
+	}
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        cr.Name,
