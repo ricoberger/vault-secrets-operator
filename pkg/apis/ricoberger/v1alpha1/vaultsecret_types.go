@@ -20,6 +20,10 @@ type VaultSecretSpec struct {
 	// secret. If the Keys field is ommitted all keys from the Vault secret will
 	// be included in the Kubernetes secret.
 	Keys []string `json:"keys,omitempty"`
+	// Templates, if not empty will be run through the the Go templating engine, with `.Vault` being mapped
+	// to the list of secrets received from Vault. When omitted set, all secrets will be added as key/val pairs
+	// under Secret.data.
+	Templates map[string]string `json:"templates,omitempty"`
 	// Path is the path of the corresponding secret in Vault.
 	Path string `json:"path"`
 	// SecretEngine specifies the type of the Vault secret engine in which the
