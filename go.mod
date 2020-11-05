@@ -3,6 +3,8 @@ module github.com/ricoberger/vault-secrets-operator
 go 1.13
 
 require (
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/operator-framework/operator-sdk v0.18.0
 	github.com/spf13/pflag v1.0.5
