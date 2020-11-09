@@ -316,7 +316,6 @@ spec:
   keys:
     - foo
     - bar
-  isBinary: true
   path: kvv1/example-vaultsecret
   templates:
     fooUri: "https://user:{% .Vault.foo %}@some-site/api"
@@ -351,7 +350,6 @@ spec:
     - foo
     - bar
     - baz
-  isBinary: true
   path: kvv1/example-vaultsecret
   templates:
     values.yaml: |-
@@ -370,6 +368,10 @@ secrets:
   bar: "barvalue"
   baz: "bazvalue
 ```
+
+#### Notes
+
+* All secrets data is converted to string before being passed to the templating engine, so using binary data will not work well, or at least be unpredictable.
 
 ## Development
 
