@@ -73,7 +73,7 @@ spec:
                 additionalProperties:
                   type: string
                 description: Templates, if not empty will be run through the the Go
-                  templating engine, with `.Vault` being mapped to the list of secrets
+                  templating engine, with `.Secrets` being mapped to the list of secrets
                   received from Vault. When omitted set, all secrets will be added
                   as key/val pairs under Secret.data.
                 type: object

@@ -318,8 +318,8 @@ spec:
     - bar
   path: kvv1/example-vaultsecret
   templates:
-    fooUri: "https://user:{% .Vault.foo %}@some-site/api"
-    barUri: "redis://{% .Vault.bar %}@redis/0"
+    fooUri: "https://user:{% .Secrets.foo %}@some-site/api"
+    barUri: "redis://{% .Secrets.bar %}@redis/0"
   type: Opaque
 ```
 
@@ -354,7 +354,7 @@ spec:
   templates:
     values.yaml: |-
       secrets:
-      {%- range $k, $v := .Vault %}
+      {%- range $k, $v := .Secrets %}
         {% $k %}: {% $v | quote -%}
       {% end %}
   type: Opaque

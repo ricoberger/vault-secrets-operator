@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"text/template"
 	"time"
 
@@ -166,15 +167,38 @@ func (r *ReconcileVaultSecret) Reconcile(request reconcile.Request) (reconcile.R
 	return reconcileResult, nil
 }
 
+// Context provided to the templating engine
+
+type templateVaultContext struct {
+	Path    string
+	Address string
+}
+type templateContext struct {
+	Secrets   map[string]string
+	Vault     templateVaultContext
+	Namespace string
+	// Labels      map[string]string
+	// Annotations map[string]string
+}
+
 // runTemplate executes a template with the given secrets map, filled with the Vault secres
-func runTemplate(tmpl string, secrets map[string][]byte) ([]byte, error) {
-	sd := struct{ Vault map[string]string }{
-		Vault: make(map[string]string, len(secrets)),
+func runTemplate(cr *ricobergerv1alpha1.VaultSecret, tmpl string, secrets map[string][]byte) ([]byte, error) {
+	// Set up the context
+	sd := templateContext{
+		Secrets: make(map[string]string, len(secrets)),
+		Vault: templateVaultContext{
+			Path:    cr.Spec.Path,
+			Address: os.Getenv("VAULT_ADDRESS"),
+		},
+		Namespace: cr.Namespace,
+		// Labels:      cr.Labels,
+		// Annotations: cr.Annotations,
 	}
 	// For templating, these should all be strings, convert
 	for k, v := range secrets {
-		sd.Vault[k] = string(v)
+		sd.Secrets[k] = string(v)
 	}
+
 	// We need to exclude some functions for security reasons and proper working of the operator, don't use TxtFuncMap:
 	// - no environment-variable related functions to prevent secrets from accessing the VAULT environment variables
 	// - no filesystem functions? Directory functions don't actually allow access to the FS, so they're OK.
@@ -220,7 +244,7 @@ func newSecretForCR(cr *ricobergerv1alpha1.VaultSecret, data map[string][]byte) 
 		newdata := make(map[string][]byte)
 		for tk, tv := range cr.Spec.Templates {
 			// Template 'tv'
-			if templated, terr := runTemplate(tv, data); terr == nil {
+			if templated, terr := runTemplate(cr, tv, data); terr == nil {
 				newdata[tk] = templated
 			} else {
 				newdata[tk] = []byte(fmt.Sprintf("# Template ERROR: %s", terr))
