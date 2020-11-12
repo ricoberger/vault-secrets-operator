@@ -381,7 +381,7 @@ secrets:
   baz: "bazvalue
 ```
 
-#### Notes
+#### Notes on templating
 
 * All secrets data is converted to string before being passed to the templating engine, so using binary data will not work well, or at least be unpredictable.
 
