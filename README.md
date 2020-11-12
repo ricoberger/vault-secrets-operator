@@ -305,6 +305,18 @@ The available functions during templating are the set offered by the [Sprig libr
 * Date/time functionality
 * Environment variable functions (for security reasons)
 
+#### Templating context
+
+The context available in the templating engine contains the following items:
+
+* `.Secrets`: Map with all the secrets fetched from vault. Key = secret name, Value = secret value
+* `.Vault`: Contains misc info about the Vault setup
+  * `.Vault.Address`: configured address of the Vault instance
+  * `.Vault.Path`: path of the Vault secret that was fetched
+* `.Namespace`: Namespace where the custom resource instance was deployed.
+
+#### Examples
+
 An example of a URI formatting secret:
 
 ```yaml
@@ -318,7 +330,7 @@ spec:
     - bar
   path: kvv1/example-vaultsecret
   templates:
-    fooUri: "https://user:{% .Secrets.foo %}@some-site/api"
+    fooUri: "https://user:{% .Secrets.foo %}@{% .Namespace %}.somesite.tld/api"
     barUri: "redis://{% .Secrets.bar %}@redis/0"
   type: Opaque
 ```
@@ -328,7 +340,7 @@ The resulting secret will look like:
 ```yaml
 apiVersion: v1
 data:
-  fooUri: aHR0cHM6Ly91c2VyOmZvb0Bzb21lLXNpdGUvYXBpCg==
+  fooUri: aHR0cHM6Ly91c2VyOmZvb0BuYW1lc3BhY2UuLnNvbWVzaXRlLnRsZC9hcGkK
   barUri: cmVkaXM6Ly9iYXJAcmVkaXMvMAo=
 kind: Secret
 metadata:
