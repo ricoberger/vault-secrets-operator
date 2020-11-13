@@ -326,6 +326,8 @@ apiVersion: ricoberger.de/v1alpha1
 kind: VaultSecret
 metadata:
   name: kvv1-example-vaultsecret
+  annotations:
+    redisdb: "0"
 spec:
   keys:
     - foo
@@ -333,7 +335,7 @@ spec:
   path: kvv1/example-vaultsecret
   templates:
     fooUri: "https://user:{% .Secrets.foo %}@{% .Namespace %}.somesite.tld/api"
-    barUri: "redis://{% .Secrets.bar %}@redis/0"
+    barUri: "redis://{% .Secrets.bar %}@redis/{% .Annotations.redisdb %}"
   type: Opaque
 ```
 
