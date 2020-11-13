@@ -174,11 +174,11 @@ type templateVaultContext struct {
 	Address string
 }
 type templateContext struct {
-	Secrets   map[string]string
-	Vault     templateVaultContext
-	Namespace string
-	// Labels      map[string]string
-	// Annotations map[string]string
+	Secrets     map[string]string
+	Vault       templateVaultContext
+	Namespace   string
+	Labels      map[string]string
+	Annotations map[string]string
 }
 
 // runTemplate executes a template with the given secrets map, filled with the Vault secres
@@ -190,9 +190,9 @@ func runTemplate(cr *ricobergerv1alpha1.VaultSecret, tmpl string, secrets map[st
 			Path:    cr.Spec.Path,
 			Address: os.Getenv("VAULT_ADDRESS"),
 		},
-		Namespace: cr.Namespace,
-		// Labels:      cr.Labels,
-		// Annotations: cr.Annotations,
+		Namespace:   cr.Namespace,
+		Labels:      cr.Labels,
+		Annotations: cr.Annotations,
 	}
 	// For templating, these should all be strings, convert
 	for k, v := range secrets {

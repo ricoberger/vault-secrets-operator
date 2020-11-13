@@ -314,6 +314,8 @@ The context available in the templating engine contains the following items:
   * `.Vault.Address`: configured address of the Vault instance
   * `.Vault.Path`: path of the Vault secret that was fetched
 * `.Namespace`: Namespace where the custom resource instance was deployed.
+* `.Labels`: access to the labels of the custom resource instance
+* `.Annotations`: access to the annotations of the custom resource instance
 
 #### Examples
 
