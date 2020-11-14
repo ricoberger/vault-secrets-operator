@@ -281,6 +281,114 @@ The value for `foo` stays as `YmFyCg==` which does not get base64 encoded again.
 
 It is also possible to change the default reconciliation strategy from `Replace` to `Merge` via the `reconcileStrategy` key in the CRD. For the default `Replace` strategy the complete secret is replaced. If you have an existing secret you can choose the `Merge` strategy to add the keys from Vault to the existing secret.
 
+### Using templated secrets
+
+When straight-forward secrets are not sufficient, and the target secrets need to be formatted in a certain way, you can use basic templating to format the secrets. There are multiple uses for this:
+
+* Generate URIs which contain secrets
+* Format secrets in a specific way, for example when using the [Helm Operator](https://docs.fluxcd.io/projects/helm-operator/) which [can use secrets as a source](https://docs.fluxcd.io/projects/helm-operator/en/stable/helmrelease-guide/values/#secrets) for its Helm chart parameterisation, but they have to be in YAML format wrapped inside a secret, like [`secretGenerator`](https://kubernetes-sigs.github.io/kustomize/api-reference/kustomization/secretegenerator/) from [Kustomize](https://kustomize.io) also generates.
+
+To do this, specify keys under `spec.templates`, containing a valid template string. 
+When `templates` is defined, the standard generation of secrets is disabled, and only the defined templates will be generated.
+
+The templating uses the standard Go templating engine, also used in tools such as [Helm](https://helm.sh) or [Gomplate](https://gomplate.ca). The main differentiator here is that the `{%` and `%}` delimiters are used to prevent conflicts with standard Go templating tools such as Helm, which use `{{` and `}}` for this.
+
+The available functions during templating are the set offered by the [Sprig library](http://masterminds.github.io/sprig/) (similar to [Helm](https://helm.sh/docs/chart_template_guide/function_list/), but different from [Gomplate](https://docs.gomplate.ca)), excluding the following functions for security-reasons or their non-idempotent nature to avoid reconciliation problems:
+
+* `genPrivateKey`
+* `genCA`
+* `genSelfSignedCert`
+* `genSignedCert`
+* `htpasswd`
+* `getHostByName`
+* Random functions
+* Date/time functionality
+* Environment variable functions (for security reasons)
+
+#### Templating context
+
+The context available in the templating engine contains the following items:
+
+* `.Secrets`: Map with all the secrets fetched from vault. Key = secret name, Value = secret value
+* `.Vault`: Contains misc info about the Vault setup
+  * `.Vault.Address`: configured address of the Vault instance
+  * `.Vault.Path`: path of the Vault secret that was fetched
+* `.Namespace`: Namespace where the custom resource instance was deployed.
+* `.Labels`: access to the labels of the custom resource instance
+* `.Annotations`: access to the annotations of the custom resource instance
+
+#### Examples
+
+An example of a URI formatting secret:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: kvv1-example-vaultsecret
+  annotations:
+    redisdb: "0"
+spec:
+  keys:
+    - foo
+    - bar
+  path: kvv1/example-vaultsecret
+  templates:
+    fooUri: "https://user:{% .Secrets.foo %}@{% .Namespace %}.somesite.tld/api"
+    barUri: "redis://{% .Secrets.bar %}@redis/{% .Annotations.redisdb %}"
+  type: Opaque
+```
+
+The resulting secret will look like:
+
+```yaml
+apiVersion: v1
+data:
+  fooUri: aHR0cHM6Ly91c2VyOmZvb0BuYW1lc3BhY2UuLnNvbWVzaXRlLnRsZC9hcGkK
+  barUri: cmVkaXM6Ly9iYXJAcmVkaXMvMAo=
+kind: Secret
+metadata:
+  labels:
+    created-by: vault-secrets-operator
+  name: kvv1-example-vaultsecret
+type: Opaque
+```
+
+This is a more advanced example for a secret that can be used by [HelmOperator](https://docs.fluxcd.io/projects/helm-operator/) as [`valuesFrom[].secretKeyRef`](https://docs.fluxcd.io/projects/helm-operator/en/stable/helmrelease-guide/values/#secrets):
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: kvv1-example-vaultsecret
+spec:
+  keys:
+    - foo
+    - bar
+    - baz
+  path: kvv1/example-vaultsecret
+  templates:
+    values.yaml: |-
+      secrets:
+      {%- range $k, $v := .Secrets %}
+        {% $k %}: {% $v | quote -%}
+      {% end %}
+  type: Opaque
+```
+
+This will loop over all secrets fetched from Vault, and set the `vault.yaml` key to a string like this:
+
+```yaml
+secrets:
+  foo: "foovalue"
+  bar: "barvalue"
+  baz: "bazvalue
+```
+
+#### Notes on templating
+
+* All secrets data is converted to string before being passed to the templating engine, so using binary data will not work well, or at least be unpredictable.
+
 ## Development
 
 After modifying the `*_types.go` file always run the following command to update the generated code for that resource type:

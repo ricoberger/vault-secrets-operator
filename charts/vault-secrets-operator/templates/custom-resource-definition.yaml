@@ -1,10 +1,10 @@
-{{ if .Values.crd.create }}
+{{- if .Values.crd.create }}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: vaultsecrets.ricoberger.de
   labels:
-{{ include "vault-secrets-operator.labels" . | indent 4 }}
+    {{- include "vault-secrets-operator.labels" . | nindent 4 }}
 spec:
   group: ricoberger.de
   names:
@@ -69,6 +69,14 @@ spec:
                   is used the Vault Secrets Operator will try to use the KV secret
                   engine.
                 type: string
+              templates:
+                additionalProperties:
+                  type: string
+                description: Templates, if not empty will be run through the the Go
+                  templating engine, with `.Secrets` being mapped to the list of secrets
+                  received from Vault. When omitted set, all secrets will be added
+                  as key/val pairs under Secret.data.
+                type: object
               type:
                 description: Type is the type of the Kubernetes secret, which will
                   be created by the Vault Secrets Operator.
@@ -93,4 +101,4 @@ spec:
     storage: true
     subresources:
       status: {}
-{{ end }}
+{{ end -}}

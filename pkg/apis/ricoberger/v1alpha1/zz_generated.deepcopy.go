@@ -77,6 +77,13 @@ func (in *VaultSecretSpec) DeepCopyInto(out *VaultSecretSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Templates != nil {
+		in, out := &in.Templates, &out.Templates
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 
