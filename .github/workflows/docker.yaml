@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Build Docker Image
-        run: docker-build
+        run: make docker-build
 
       - name: Login to Docker Hub
         if: startsWith(github.ref, 'refs/tags/')
@@ -23,4 +23,4 @@ jobs:
 
       - name: Push Docker Image
         if: startsWith(github.ref, 'refs/tags/')
-        run: docker-push
+        run: make docker-push
