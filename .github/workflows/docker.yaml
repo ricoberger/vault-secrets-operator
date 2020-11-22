@@ -1,32 +1,26 @@
 name: Docker
 
-on:
-  push:
-    tags:
-      - '*'
+on: push
 
 jobs:
-  build-release:
+  docker:
     name: Release Docker Image
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go 1.13
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.13
-      id: go
+      - name: Checkout
+        uses: actions/checkout@v1
 
-    - name: Set up Operator SDK v0.10.0
-      run: curl -OJL https://github.com/operator-framework/operator-sdk/releases/download/v0.10.0/operator-sdk-v0.10.0-x86_64-linux-gnu && sudo install -m 755 operator-sdk-v0.10.0-x86_64-linux-gnu /usr/local/bin/operator-sdk
+      - name: Build Docker Image
+        run: docker-build
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v1
+      - name: Login to Docker Hub
+        if: startsWith(github.ref, 'refs/tags/')
+        run: docker login --username ${{ secrets.DOCKER_USERNAME }} --password ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Login to Docker Hub
-      run: docker login --username ${{ secrets.DOCKER_USERNAME }} --password ${{ secrets.DOCKER_PASSWORD }}
+      - name: Login to GitHub Package Registry
+        if: startsWith(github.ref, 'refs/tags/')
+        run: docker login docker.pkg.github.com --username ricoberger --password ${{ secrets.TOKEN }}
 
-    - name: Login to GitHub Package Registry
-      run: docker login docker.pkg.github.com --username ricoberger --password ${{ secrets.TOKEN }}
-
-    - name: Release
-      run: make release
+      - name: Push Docker Image
+        if: startsWith(github.ref, 'refs/tags/')
+        run: docker-push

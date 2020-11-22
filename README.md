@@ -288,7 +288,7 @@ When straight-forward secrets are not sufficient, and the target secrets need to
 * Generate URIs which contain secrets
 * Format secrets in a specific way, for example when using the [Helm Operator](https://docs.fluxcd.io/projects/helm-operator/) which [can use secrets as a source](https://docs.fluxcd.io/projects/helm-operator/en/stable/helmrelease-guide/values/#secrets) for its Helm chart parameterisation, but they have to be in YAML format wrapped inside a secret, like [`secretGenerator`](https://kubernetes-sigs.github.io/kustomize/api-reference/kustomization/secretegenerator/) from [Kustomize](https://kustomize.io) also generates.
 
-To do this, specify keys under `spec.templates`, containing a valid template string. 
+To do this, specify keys under `spec.templates`, containing a valid template string.
 When `templates` is defined, the standard generation of secrets is disabled, and only the defined templates will be generated.
 
 The templating uses the standard Go templating engine, also used in tools such as [Helm](https://helm.sh) or [Gomplate](https://gomplate.ca). The main differentiator here is that the `{%` and `%}` delimiters are used to prevent conflicts with standard Go templating tools such as Helm, which use `{{` and `}}` for this.
@@ -394,31 +394,20 @@ secrets:
 After modifying the `*_types.go` file always run the following command to update the generated code for that resource type:
 
 ```sh
-operator-sdk generate k8s
+make generate
 ```
 
-To update the CRD `deploy/crds/ricoberger.de_vaultsecrets_crd.yaml`, run the following command:
+The above makefile target will invoke the [controller-gen](https://sigs.k8s.io/controller-tools) utility to update the `api/v1alpha1/zz_generated.deepcopy.go` file to ensure our API's Go type definitons implement the `runtime.Object` interface that all Kind types must implement.
+
+Once the API is defined with spec/status fields and CRD validation markers, the CRD manifests can be generated and updated with the following command:
 
 ```sh
-operator-sdk generate crds
+make manifests
 ```
 
-Create an example secret in Vault. Then apply the Custom Resource Definition for the Vault Secrets Operator and the example Custom Resource:
-
-```sh
-vault kv put kvv1/example-vaultsecret foo=bar
-
-kubectl apply -f deploy/crds/ricoberger.de_vaultsecrets_crd.yaml
-kubectl apply -f deploy/crds/ricoberger.de_v1alpha1_vaultsecret_cr.yaml
-```
+This makefile target will invoke controller-gen to generate the CRD manifests at `config/crd/bases/ricoberger.de_vaultsecrets.yaml`.
 
 ### Locally
-
-Set the name of the operator in an environment variable:
-
-```sh
-export OPERATOR_NAME=vault-secrets-operator
-```
 
 Specify the Vault address, a token to access Vault and the TTL (in seconds) for the token:
 
@@ -426,21 +415,20 @@ Specify the Vault address, a token to access Vault and the TTL (in seconds) for 
 export VAULT_ADDRESS=
 export VAULT_AUTH_METHOD=token
 export VAULT_TOKEN=
-export VAULT_TOKEN_LEASE_DURATION=
-export VAULT_RECONCILIATION_TIME=
+export VAULT_TOKEN_LEASE_DURATION=86400
+export VAULT_RECONCILIATION_TIME=180
 ```
 
-Run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
+Deploy the CRD and run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
 
 ```sh
-operator-sdk run local --watch-namespace=""
+kubectl apply -f config/crd/bases/ricoberger.de_vaultsecrets.yaml
+make run ENABLE_WEBHOOKS=false
 ```
-
-You can use a specific kubeconfig via the flag `--kubeconfig=<path/to/kubeconfig>`.
 
 ### Minikube
 
-Reuse Minikube’s built-in Docker daemon:
+Reuse Minikube's built-in Docker daemon:
 
 ```sh
 eval $(minikube docker-env)
@@ -449,8 +437,16 @@ eval $(minikube docker-env)
 Build the Docker image for the operator:
 
 ```sh
-make build
+make docker-build IMG=ricoberger/vault-secrets-operator:dev
 ```
+
+Run the following to deploy the operator. This will also install the RBAC manifests from `config/rbac`.
+
+```sh
+make deploy IMG=ricoberger/vault-secrets-operator:dev
+```
+
+// TODO: Adjust command to test the Helm chart
 
 Deploy the Helm chart:
 
@@ -469,6 +465,6 @@ EOF
 
 ## Links
 
-- [Managing Secrets in Kubernetes](https://www.weave.works/blog/managing-secrets-in-kubernetes)
-- [Operator SDK](https://github.com/operator-framework/operator-sdk)
-- [Vault](https://www.vaultproject.io)
+* [Managing Secrets in Kubernetes](https://www.weave.works/blog/managing-secrets-in-kubernetes)
+* [Operator SDK](https://github.com/operator-framework/operator-sdk)
+* [Vault](https://www.vaultproject.io)
