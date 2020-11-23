@@ -25,3 +25,10 @@ jobs:
         run: ./testbin/setup-kind.sh
         env:
           VAULT_ADDR: http://127.0.0.1:8200
+
+      - name: Show Pod Status and Logs
+        run: |
+          kubectl get pods --namespace vault
+          kubectl  logs --namespace=vault vault-0
+          kubectl get pods --namespace vault-secrets-operator
+          kubectl  logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
