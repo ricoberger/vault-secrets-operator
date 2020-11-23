@@ -4,7 +4,7 @@ on: push
 
 jobs:
   docker:
-    name: Release Docker Image
+    name: Docker
     runs-on: ubuntu-latest
     defaults:
       run:

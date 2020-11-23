@@ -1,0 +1,19 @@
+name: Test
+
+on: pull_request
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Run Test
+        run: ./testbin/setup-kind.sh
