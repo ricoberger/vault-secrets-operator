@@ -2,7 +2,7 @@
 
 set -o errexit
 
-# create registry container unless it already exists
+# Create registry container unless it already exists
 reg_name='kind-registry'
 reg_port='5000'
 running="$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
@@ -12,7 +12,7 @@ if [ "${running}" != 'true' ]; then
     registry:2
 fi
 
-# create a cluster with the local registry enabled in containerd
+# Create a cluster with the local registry enabled in containerd
 cat <<EOF | kind create cluster --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -22,8 +22,7 @@ containerdConfigPatches:
     endpoint = ["http://${reg_name}:${reg_port}"]
 EOF
 
-# connect the registry to the cluster network
-# (the network may already be connected)
+# Connect the registry to the cluster network (the network may already be connected)
 docker network connect "kind" "${reg_name}" || true
 
 # Document the local registry
@@ -40,12 +39,14 @@ data:
     help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
 EOF
 
+# Build the image for the operator and push the image to our local registry
 docker build . -t localhost:5000/vault-secrets-operator:test
 docker push localhost:5000/vault-secrets-operator:test
 
 kubectl create ns vault
 kubectl create ns vault-secrets-operator
 
+# Install Vault in the cluster and create a new secret engine for the operator
 helm repo add hashicorp https://helm.releases.hashicorp.com
 helm upgrade --install vault hashicorp/vault --namespace=vault --set server.dev.enabled=true --set injector.enabled=false
 
@@ -63,6 +64,7 @@ path "kvv2/data/*" {
 EOF
 vault kv put kvv2/helloworld foo=bar
 
+# Install the operator via the Helm chart and enable the Kubernetes authentication method for the operator
 helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="http://vault.vault.svc.cluster.local:8200" --set vault.authMethod="kubernetes" --set image.repository="localhost:5000/vault-secrets-operator" --set image.tag="test"
 
 export VAULT_SECRETS_OPERATOR_NAMESPACE=$(kubectl get sa --namespace=vault-secrets-operator vault-secrets-operator -o jsonpath="{.metadata.namespace}")
@@ -75,6 +77,7 @@ vault auth enable kubernetes
 vault write auth/kubernetes/config token_reviewer_jwt="$SA_JWT_TOKEN" kubernetes_host="https://kubernetes.default.svc" kubernetes_ca_cert="$SA_CA_CRT"
 vault write auth/kubernetes/role/vault-secrets-operator bound_service_account_names="vault-secrets-operator" bound_service_account_namespaces="$VAULT_SECRETS_OPERATOR_NAMESPACE" policies=vault-secrets-operator ttl=24h
 
+# Create a VaultSecret for the "helloworld" secret from Vault
 cat <<EOF | kubectl apply -f -
 apiVersion: ricoberger.de/v1alpha1
 kind: VaultSecret
@@ -85,8 +88,10 @@ spec:
   type: Opaque
 EOF
 
+# Delete the operator Pod to use the newly configured Service Account and check if the operator created a Kubernetes secret for our example
 kubectl wait pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator --for=condition=Ready --timeout=180s
 kubectl delete pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
 kubectl wait pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator --for=condition=Ready --timeout=180s
+sleep 10s
 kubectl get secret helloworld -o yaml
 kubectl  logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
