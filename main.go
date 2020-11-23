@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -34,8 +35,10 @@ func init() {
 
 func main() {
 	var metricsAddr string
+	var probesAddr string
 	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&probesAddr, "probes-addr", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -59,12 +62,15 @@ func main() {
 	}
 
 	options := ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "vaultsecretsoperator.ricoberger.de",
-		Namespace:          watchNamespace,
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		HealthProbeBindAddress: probesAddr,
+		ReadinessEndpointName:  "/readyz",
+		LivenessEndpointName:   "/healthz",
+		Port:                   9443,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "vaultsecretsoperator.ricoberger.de",
+		Namespace:              watchNamespace,
 	}
 
 	// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)
@@ -80,6 +86,13 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+
+	mgr.AddReadyzCheck("readyz", func(req *http.Request) error {
+		return vault.LookupToken()
+	})
+	mgr.AddHealthzCheck("healthz", func(req *http.Request) error {
+		return nil
+	})
 
 	if err = (&controllers.VaultSecretReconciler{
 		Client: mgr.GetClient(),

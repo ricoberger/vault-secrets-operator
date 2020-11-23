@@ -7,14 +7,14 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 8383
+    - port: 8080
       targetPort: metrics
       protocol: TCP
       name: metrics
-    - port: 8686
-      targetPort: opmetrics
+    - port: 8081
+      targetPort: http
       protocol: TCP
-      name: opmetrics
+      name: http
   selector:
     app.kubernetes.io/name: {{ include "vault-secrets-operator.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}

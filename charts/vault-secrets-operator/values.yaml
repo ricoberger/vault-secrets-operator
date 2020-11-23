@@ -5,7 +5,6 @@ image:
   repository: ricoberger/vault-secrets-operator
   tag: 1.9.0
   pullPolicy: IfNotPresent
-  args: []
   volumeMounts: []
     # - name: ca
     #   mountPath: "/etc/vault-secrets-operator"
