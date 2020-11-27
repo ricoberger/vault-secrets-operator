@@ -5,7 +5,7 @@
 | `replicaCount` | Number of replications which should be created. | `1` |
 | `deploymentStrategy` | Deployment strategy which should be used. | `{}` |
 | `image.repository` | The repository of the Docker image. | `ricoberger/vault-secrets-operator` |
-| `image.tag` | The tag of the Docker image which should be used. | `1.9.0` |
+| `image.tag` | The tag of the Docker image which should be used. | `1.10.0` |
 | `image.pullPolicy` | The pull policy for the Docker image, | `IfNotPresent` |
 | `image.volumeMounts` | Mount additional volumns to the container. | `[]` |
 | `imagePullSecrets` | Secrets which can be used to pull the Docker image. | `[]` |

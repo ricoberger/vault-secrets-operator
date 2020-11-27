@@ -20,7 +20,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: ricoberger/vault-secrets-operator:1.9.0
+        image: ricoberger/vault-secrets-operator:
         name: manager
         ports:
         - name: metrics
