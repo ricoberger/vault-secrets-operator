@@ -446,22 +446,13 @@ Run the following to deploy the operator. This will also install the RBAC manife
 make deploy IMG=ricoberger/vault-secrets-operator:dev
 ```
 
-// TODO: Adjust command to test the Helm chart
-
 Deploy the Helm chart:
 
 ```sh
-cat <<EOF | helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator -f -
-image:
-  repository: ricoberger/vault-secrets-operator
-  tag:
-  args: ["--zap-encoder", "console"]
-
-vault:
-  address: ""
-  authMethod: "kubernetes"
-EOF
+helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="$VAULT_ADDRESS" --set image.repository="ricoberger/vault-secrets-operator" --set image.tag="dev"
 ```
+
+For an example using [kind](https://kind.sigs.k8s.io) you can take a look at the `testbin/setup-kind.sh` file.
 
 ## Links
 

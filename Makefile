@@ -135,9 +135,11 @@ release-major:
 	sed -i'.backup' 's/${OLD_VERSION}/${MAJORVERSION}/g' charts/README.md
 	sed -i'.backup' 's/${OLD_VERSION}/${MAJORVERSION}/g' charts/vault-secrets-operator/Chart.yaml
 	sed -i'.backup' 's/${OLD_VERSION}/${MAJORVERSION}/g' charts/vault-secrets-operator/values.yaml
+	sed -i'.backup' 's/${OLD_VERSION}/${MAJORVERSION}/g' config/manager/deploy.yaml
 	rm charts/README.md.backup
 	rm charts/vault-secrets-operator/Chart.yaml.backup
 	rm charts/vault-secrets-operator/values.yaml.backup
+	rm config/manager/deploy.yaml.backup
 	git add .
 	git commit -m 'Prepare release $(MAJORVERSION)'
 	git push
@@ -153,9 +155,11 @@ release-minor:
 	sed -i'.backup' 's/${OLD_VERSION}/${MINORVERSION}/g' charts/README.md
 	sed -i'.backup' 's/${OLD_VERSION}/${MINORVERSION}/g' charts/vault-secrets-operator/Chart.yaml
 	sed -i'.backup' 's/${OLD_VERSION}/${MINORVERSION}/g' charts/vault-secrets-operator/values.yaml
+	sed -i'.backup' 's/${OLD_VERSION}/${MAJORVERSION}/g' config/manager/deploy.yaml
 	rm charts/README.md.backup
 	rm charts/vault-secrets-operator/Chart.yaml.backup
 	rm charts/vault-secrets-operator/values.yaml.backup
+	rm config/manager/deploy.yaml.backup
 	git add .
 	git commit -m 'Prepare release $(MINORVERSION)'
 	git push
@@ -171,9 +175,11 @@ release-patch:
 	sed -i'.backup' 's/${OLD_VERSION}/${PATCHVERSION}/g' charts/README.md
 	sed -i'.backup' 's/${OLD_VERSION}/${PATCHVERSION}/g' charts/vault-secrets-operator/Chart.yaml
 	sed -i'.backup' 's/${OLD_VERSION}/${PATCHVERSION}/g' charts/vault-secrets-operator/values.yaml
+	sed -i'.backup' 's/${OLD_VERSION}/${MAJORVERSION}/g' config/manager/deploy.yaml
 	rm charts/README.md.backup
 	rm charts/vault-secrets-operator/Chart.yaml.backup
 	rm charts/vault-secrets-operator/values.yaml.backup
+	rm config/manager/deploy.yaml.backup
 	git add .
 	git commit -m 'Prepare release $(PATCHVERSION)'
 	git push

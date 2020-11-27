@@ -93,13 +93,13 @@ func (r *VaultSecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		secret = mergeSecretData(secret, found)
 
 		log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-		err = r.Update(context.TODO(), secret)
+		err = r.Update(ctx, secret)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	} else {
 		log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-		err = r.Update(context.TODO(), secret)
+		err = r.Update(ctx, secret)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
