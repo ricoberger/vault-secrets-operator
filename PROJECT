@@ -1,0 +1,11 @@
+domain: ricoberger.de
+layout: go.kubebuilder.io/v2
+projectName: vault-secrets-operator
+repo: github.com/ricoberger/vault-secrets-operator
+resources:
+- group: ricoberger.de
+  kind: VaultSecret
+  version: v1alpha1
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}

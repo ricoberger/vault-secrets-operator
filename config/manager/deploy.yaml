@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-secrets-operator
+  namespace: vault-secrets-operator
+  labels:
+    app: vault-secrets-operator
+spec:
+  selector:
+    matchLabels:
+      app: vault-secrets-operator
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: vault-secrets-operator
+    spec:
+      containers:
+      - command:
+        - /manager
+        args:
+        - --enable-leader-election
+        image: ricoberger/vault-secrets-operator:1.9.0
+        name: manager
+        ports:
+        - name: metrics
+          containerPort: 8080
+          protocol: TCP
+        - name: http
+          containerPort: 8081
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi

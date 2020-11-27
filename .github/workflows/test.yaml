@@ -1,0 +1,34 @@
+name: Test
+
+on: pull_request
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Vault
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get update && sudo apt-get install vault
+
+      - name: Run Test
+        run: ./testbin/setup-kind.sh
+        env:
+          VAULT_ADDR: http://127.0.0.1:8200
+
+      - name: Show Pod Status and Logs
+        run: |
+          kubectl get pods --namespace vault
+          kubectl  logs --namespace=vault vault-0
+          kubectl get pods --namespace vault-secrets-operator
+          kubectl  logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator

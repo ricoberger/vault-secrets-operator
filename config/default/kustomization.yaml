@@ -1,0 +1,7 @@
+# Adds namespace to all resources.
+namespace: vault-secrets-operator
+
+bases:
+- ../crd
+- ../rbac
+- ../manager

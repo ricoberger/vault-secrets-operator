@@ -35,8 +35,10 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /manager
           args:
-            {{- toYaml .Values.image.args | nindent 12 }}
+            - --enable-leader-election
           env:
             - name: WATCH_NAMESPACE
             {{- if .Values.rbac.namespaced }}
@@ -44,12 +46,6 @@ spec:
             {{- else }}
               value: {{ .Values.vault.namespaces | quote }}
             {{- end }}
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: OPERATOR_NAME
-              value: "vault-secrets-operator"
             - name: VAULT_ADDRESS
               value: {{ .Values.vault.address | quote }}
             - name: VAULT_AUTH_METHOD
@@ -66,14 +62,11 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
-            - name: http
+            - name: metrics
               containerPort: 8080
               protocol: TCP
-            - name: metrics
-              containerPort: 8383
-              protocol: TCP
-            - name: opmetrics
-              containerPort: 8686
+            - name: http
+              containerPort: 8081
               protocol: TCP
           {{- with .Values.image.volumeMounts }}
           volumeMounts:
@@ -81,11 +74,11 @@ spec:
           {{- end }}
           livenessProbe:
             httpGet:
-              path: /livenessProbe
+              path: /healthz
               port: http
           readinessProbe:
             httpGet:
-              path: /readinessProbe
+              path: /readyz
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
