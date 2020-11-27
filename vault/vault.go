@@ -55,6 +55,9 @@ var (
 
 	// tokenRenewalRetryInterval is the time until a failed vault token renewal is retried.
 	tokenRenewalRetryInterval float64
+
+	// lookupTokenTime is the time when the LookupToken function was called last.
+	lookupTokenTime time.Time
 )
 
 // CreateClient creates a new Vault API client.
@@ -190,9 +193,14 @@ func CreateClient() error {
 // LookupToken displays information about a token. It's mainly used for the
 // readiness probe of the operator.
 func LookupToken() error {
-	_, err := client.Auth().Token().LookupSelf()
-	if err != nil {
-		return err
+	if lookupTokenTime.Before(time.Now().Add(-1 * time.Hour)) {
+		log.Info("Call lookup self function")
+		_, err := client.Auth().Token().LookupSelf()
+		if err != nil {
+			return err
+		}
+
+		lookupTokenTime = time.Now()
 	}
 
 	return nil
