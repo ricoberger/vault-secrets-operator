@@ -13,7 +13,6 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
 IMG ?= ricoberger/vault-secrets-operator:$(VERSION)
-GITHUB_IMG ?= docker.pkg.github.com/ricoberger/vault-secrets-operator/vault-secrets-operator:$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:crdVersions={v1},trivialVersions=true"
 
@@ -76,10 +75,7 @@ docker-build: test
 
 # Push the docker image
 docker-push:
-	# Retag the image for GitHub Package Registry
-	docker tag ${IMG} ${GITHUB_IMG}
 	docker push ${IMG}
-	docker push ${GITHUB_IMG}
 
 # find or download controller-gen
 # download controller-gen if necessary
