@@ -151,7 +151,7 @@ release-minor:
 	sed -i'.backup' 's/${OLD_VERSION}/${MINORVERSION}/g' charts/README.md
 	sed -i'.backup' 's/${OLD_VERSION}/${MINORVERSION}/g' charts/vault-secrets-operator/Chart.yaml
 	sed -i'.backup' 's/${OLD_VERSION}/${MINORVERSION}/g' charts/vault-secrets-operator/values.yaml
-	sed -i'.backup' 's/${OLD_VERSION}/${MAJORVERSION}/g' config/manager/deploy.yaml
+	sed -i'.backup' 's/${OLD_VERSION}/${MINORVERSION}/g' config/manager/deploy.yaml
 	rm charts/README.md.backup
 	rm charts/vault-secrets-operator/Chart.yaml.backup
 	rm charts/vault-secrets-operator/values.yaml.backup
@@ -171,7 +171,7 @@ release-patch:
 	sed -i'.backup' 's/${OLD_VERSION}/${PATCHVERSION}/g' charts/README.md
 	sed -i'.backup' 's/${OLD_VERSION}/${PATCHVERSION}/g' charts/vault-secrets-operator/Chart.yaml
 	sed -i'.backup' 's/${OLD_VERSION}/${PATCHVERSION}/g' charts/vault-secrets-operator/values.yaml
-	sed -i'.backup' 's/${OLD_VERSION}/${MAJORVERSION}/g' config/manager/deploy.yaml
+	sed -i'.backup' 's/${OLD_VERSION}/${PATCHVERSION}/g' config/manager/deploy.yaml
 	rm charts/README.md.backup
 	rm charts/vault-secrets-operator/Chart.yaml.backup
 	rm charts/vault-secrets-operator/values.yaml.backup
