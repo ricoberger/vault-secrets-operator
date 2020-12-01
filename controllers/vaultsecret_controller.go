@@ -70,6 +70,12 @@ func (r *VaultSecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// Define a new Secret object
 	secret := newSecretForCR(instance, data)
 
+	// Set VaultSecret instance as the owner and controller
+	err = ctrl.SetControllerReference(instance, secret, r.Scheme)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Check if this Secret already exists
 	found := &corev1.Secret{}
 	err = r.Get(ctx, types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, found)
