@@ -89,20 +89,18 @@ environmentVars:
 
 #### Kubernetes Auth Method
 
-The recommanded way for the authentication is the Kubernetes auth method. There for you need a service account for the communication between Vault and the Vault Secrets Operator. If you installed the operator via Helm this service account is created for you. The name of the created service account is `vault-secrets-operator`. Use the following commands to set the environment variables for the activation of the Kubernetes auth method:
+The recommanded way for the authentication is the Kubernetes auth method. There for you need a service account for the communication between Vault and the Vault Secrets Operator. If you installed the operator via Helm this service account is created for you. The name of the created service account is `vault-secrets-operator`. 
+
+Exec into one of your vault pods (`kubectl exec -it vault-0 /bin/sh`) and run the following...
 
 ```sh
-export VAULT_SECRETS_OPERATOR_NAMESPACE=$(kubectl get sa vault-secrets-operator -o jsonpath="{.metadata.namespace}")
-export VAULT_SECRET_NAME=$(kubectl get sa vault-secrets-operator -o jsonpath="{.secrets[*]['name']}")
-export SA_JWT_TOKEN=$(kubectl get secret $VAULT_SECRET_NAME -o jsonpath="{.data.token}" | base64 --decode; echo)
-export SA_CA_CRT=$(kubectl get secret $VAULT_SECRET_NAME -o jsonpath="{.data['ca\.crt']}" | base64 --decode; echo)
-export K8S_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
-
-# Verfify the environment variables
-env | grep -E 'VAULT_SECRETS_OPERATOR_NAMESPACE|VAULT_SECRET_NAME|SA_JWT_TOKEN|SA_CA_CRT|K8S_HOST'
+vault write auth/kubernetes/config \
+   token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
+   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 ```
 
-Enable the Kubernetes auth method at the default path (`auth/kubernetes`) and finish the configuration of Vault:
+Then, enable the Kubernetes auth method at the default path (`auth/kubernetes`) and finish the configuration of Vault:
 
 ```sh
 vault auth enable kubernetes
