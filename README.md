@@ -91,25 +91,22 @@ environmentVars:
 
 The recommanded way for the authentication is the Kubernetes auth method. There for you need a service account for the communication between Vault and the Vault Secrets Operator. If you installed the operator via Helm this service account is created for you. The name of the created service account is `vault-secrets-operator`. 
 
-Exec into one of your vault pods (`kubectl exec -it vault-0 /bin/sh`) and run the following...
+First get the namespace of the secrets operator...
 
 ```sh
-vault write auth/kubernetes/config \
-   token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
-   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+export VAULT_SECRETS_OPERATOR_NAMESPACE=$(kubectl get sa vault-secrets-operator -o jsonpath="{.metadata.namespace}")
 ```
 
-Then, enable the Kubernetes auth method at the default path (`auth/kubernetes`) and finish the configuration of Vault:
+Then, exec into one of your vault pods (`kubectl exec -it vault-0 /bin/sh`) and run the following...
 
 ```sh
 vault auth enable kubernetes
 
 # Tell Vault how to communicate with the Kubernetes cluster
 vault write auth/kubernetes/config \
-  token_reviewer_jwt="$SA_JWT_TOKEN" \
-  kubernetes_host="$K8S_HOST" \
-  kubernetes_ca_cert="$SA_CA_CRT"
+   token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
+   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 
 # Create a role named, 'vault-secrets-operator' to map Kubernetes Service Account to Vault policies and default token TTL
 vault write auth/kubernetes/role/vault-secrets-operator \
