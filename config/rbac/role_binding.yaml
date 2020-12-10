@@ -8,5 +8,5 @@ roleRef:
   name: vault-secrets-operator
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: vault-secrets-operator
   namespace: vault-secrets-operator
