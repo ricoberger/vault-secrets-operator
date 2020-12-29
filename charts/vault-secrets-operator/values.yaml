@@ -107,3 +107,6 @@ serviceMonitor:
   scrapeTimeout: 10s
   honorLabels: true
   relabelings: []
+
+# A priority class can be optionally attached to the pod spec if one is needed
+# priorityClassName: high

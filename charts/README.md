@@ -37,3 +37,4 @@
 | `serviceMonitor.scrapeTimeout` | Scrape timeout. | `10s` |
 | `serviceMonitor.honorLabels` | Honor labels option. | `true` |
 | `serviceMonitor.relabelings` | Additional relabeling config for the ServiceMonitor. | `[]` |
+| `priorityClassName` | Optionally attach priority class to pod spec. | `null` |
