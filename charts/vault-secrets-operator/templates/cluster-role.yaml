@@ -23,6 +23,9 @@ rules:
     - ricoberger.de
     resources:
     - vaultsecrets
+{{- if .Capabilities.APIVersions.Has "route.openshift.io/v1/Route" }}
+    - vaultsecrets/finalizers
+{{- end }}
     verbs:
     - create
     - delete
