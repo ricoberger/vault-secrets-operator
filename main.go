@@ -48,13 +48,17 @@ func main() {
 
 	// Create the API client for Vault and start the renew process for the
 	// token in a new goroutine.
-	err := vault.CreateClient()
+	err := vault.InitSharedClient()
 	if err != nil {
 		ctrl.Log.Error(err, "Could not create API client for Vault")
 		os.Exit(1)
+	} else {
+		if vault.SharedClient != nil {
+			go vault.SharedClient.RenewToken()
+		} else {
+			ctrl.Log.Info("Shared client wasn't initialized, each secret must be use the vaultRole property")
+		}
 	}
-
-	go vault.RenewToken()
 
 	watchNamespace, err := getWatchNamespace()
 	if err != nil {
@@ -88,7 +92,7 @@ func main() {
 	}
 
 	mgr.AddReadyzCheck("readyz", func(req *http.Request) error {
-		return vault.LookupToken()
+		return nil
 	})
 	mgr.AddHealthzCheck("healthz", func(req *http.Request) error {
 		return nil

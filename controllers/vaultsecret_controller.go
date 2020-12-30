@@ -64,11 +64,41 @@ func (r *VaultSecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
-	data, err := vault.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary)
-	if err != nil {
-		// Error while getting the secret from Vault - requeue the request.
-		log.Error(err, "Could not get secret from vault")
-		return ctrl.Result{}, err
+	// Get secret from Vault.
+	// If the VaultSecret contains the vaulRole property we are creating a new client with the specified Vault Role to
+	// get the secret.
+	// When the property isn't set we are using the shared client. It is also possible that the shared client is nil, so
+	// that we have to check for this first. This could happen since we do not return an error when we initializing the
+	// client during start up, to not require a default Vault Role.
+	var data map[string][]byte
+
+	if instance.Spec.VaultRole != "" {
+		log.WithValues("vaultRole", instance.Spec.VaultRole).Info("Create client to get secret from Vault")
+		vaultClient, err := vault.CreateClient(instance.Spec.VaultRole)
+		if err != nil {
+			// Error creating the Vault client - requeue the request.
+			return ctrl.Result{}, err
+		}
+		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary)
+		if err != nil {
+			// Error while getting the secret from Vault - requeue the request.
+			log.Error(err, "Could not get secret from vault")
+			return ctrl.Result{}, err
+		}
+	} else {
+		log.Info("Use shared client to get secret from Vault")
+		if vault.SharedClient == nil {
+			err = fmt.Errorf("shared client not initilized and vaultRole property missing")
+			log.Error(err, "Could not get secret from Vault")
+			return ctrl.Result{}, err
+		}
+
+		data, err = vault.SharedClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary)
+		if err != nil {
+			// Error while getting the secret from Vault - requeue the request.
+			log.Error(err, "Could not get secret from vault")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Define a new Secret object

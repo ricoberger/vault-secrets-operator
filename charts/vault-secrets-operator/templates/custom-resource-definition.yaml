@@ -84,6 +84,13 @@ spec:
                 description: Type is the type of the Kubernetes secret, which will
                   be created by the Vault Secrets Operator.
                 type: string
+              vaultRole:
+                description: VaultRole can be used to specify the Vault role, which
+                  should be used to get the secret from Vault. If the vaultRole property
+                  is set a new client with the specified Vault Role will be created
+                  and the shared client is ignored. If the operator is configured
+                  using the token auth method this property has no effect.
+                type: string
               version:
                 description: Version sets the version of the secret which should be
                   used. The version is only used if the KVv2 secret engine is used.
