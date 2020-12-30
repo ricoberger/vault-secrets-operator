@@ -113,19 +113,19 @@ vault write auth/kubernetes/config \
   kubernetes_host="$K8S_HOST" \
   kubernetes_ca_cert="$SA_CA_CRT"
 
-# If you're running Vault inside kubernetes, you can alternatively exec into any Vault pod and run this...
-# In some bare-metal k8s setups this method is necessary.
-# vault write auth/kubernetes/config \
-#   token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-#   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
-#   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-
 # Create a role named, 'vault-secrets-operator' to map Kubernetes Service Account to Vault policies and default token TTL
 vault write auth/kubernetes/role/vault-secrets-operator \
   bound_service_account_names="vault-secrets-operator" \
   bound_service_account_namespaces="$VAULT_SECRETS_OPERATOR_NAMESPACE" \
   policies=vault-secrets-operator \
   ttl=24h
+
+# If you're running Vault inside kubernetes, you can alternatively exec into any Vault pod and run this...
+# In some bare-metal k8s setups this method is necessary.
+# vault write auth/kubernetes/config \
+#   token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+#   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
+#   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 ```
 
 When you deploy the Vault Secrets Operator via Helm chart you have to set the `vault.authMethod` property to `kubernetes` in the `values.yaml` file, to use the Kubernetes auth method instead of the default Token auth methods.
@@ -395,6 +395,25 @@ secrets:
 #### Notes on templating
 
 * All secrets data is converted to string before being passed to the templating engine, so using binary data will not work well, or at least be unpredictable.
+
+### Using specific Vault Role for secrets
+
+It is possible to not set the `VAULT_KUBERNETES_ROLE` (`vault.kubernetesRole` value in the Helm chart) and instead specify the Vault Role at the CR. This allows you to to use different Vault Roles within one Vault Secrets Operator instance.
+
+The Vault Role is set via the `vaultRole` property in the VaultSecret CR:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: kvv1-example-vaultsecret
+spec:
+  vaultRole: my-custom-vault-role
+  path: kvv1/example-vaultsecret
+  type: Opaque
+```
+
+> **Note:** This option is only available for the kubernetes auth method and all roles must be added to the auth method before they are used by the operator.
 
 ## Development
 

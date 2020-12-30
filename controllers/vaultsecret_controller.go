@@ -64,11 +64,29 @@ func (r *VaultSecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
-	data, err := vault.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary)
-	if err != nil {
-		// Error while getting the secret from Vault - requeue the request.
-		log.Error(err, "Could not get secret from vault")
-		return ctrl.Result{}, err
+	var data map[string][]byte
+
+	if instance.Spec.VaultRole != "" {
+		log.WithValues("vaultRole", instance.Spec.VaultRole).Info("Create client to get secret from Vault")
+		vaultClient, err := vault.CreateClient(instance.Spec.VaultRole)
+		if err != nil {
+			// Error creating the Vault client - requeue the request.
+			return ctrl.Result{}, err
+		}
+		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary)
+		if err != nil {
+			// Error while getting the secret from Vault - requeue the request.
+			log.Error(err, "Could not get secret from vault")
+			return ctrl.Result{}, err
+		}
+	} else {
+		log.Info("Use shared client to get secret from Vault")
+		data, err = vault.SharedClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary)
+		if err != nil {
+			// Error while getting the secret from Vault - requeue the request.
+			log.Error(err, "Could not get secret from vault")
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Define a new Secret object
