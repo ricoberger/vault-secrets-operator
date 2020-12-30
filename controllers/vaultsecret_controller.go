@@ -88,7 +88,9 @@ func (r *VaultSecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	} else {
 		log.Info("Use shared client to get secret from Vault")
 		if vault.SharedClient == nil {
-			log.Error(fmt.Errorf("shared client not initilized and vaultRole property missing"), "Could not get secret from Vault")
+			err = fmt.Errorf("shared client not initilized and vaultRole property missing")
+			log.Error(err, "Could not get secret from Vault")
+			return ctrl.Result{}, err
 		}
 
 		data, err = vault.SharedClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary)
