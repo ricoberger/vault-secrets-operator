@@ -1,4 +1,6 @@
 ## Append samples you want in your CSV to this file as resources ##
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
 resources:
 - ricoberger.de_v1alpha1_vaultsecret.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
