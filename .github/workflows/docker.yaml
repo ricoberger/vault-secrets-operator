@@ -20,13 +20,27 @@ jobs:
         with:
           go-version: 1.15
 
+      - name: Set Docker Tag
+        id: tag
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            DOCKER_TAG="${GITHUB_REF:10}"
+          elif [[ $GITHUB_REF == refs/heads/dev ]]; then
+            DOCKER_TAG="dev"
+          elif [[ $GITHUB_REF == refs/heads/master ]]; then
+            DOCKER_TAG="master"
+          else
+            DOCKER_TAG="${GITHUB_REF:11}"
+          fi
+          echo ::set-output name=tag::${DOCKER_TAG}
+
       - name: Build Docker Image
-        run: make docker-build
+        run: make docker-build IMG=ricoberger/vault-secrets-operator:${{ steps.tag.outputs.tag }}
 
       - name: Login to Docker Hub
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
         run: docker login --username ${{ secrets.DOCKER_USERNAME }} --password ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Push Docker Image
-        if: startsWith(github.ref, 'refs/tags/')
-        run: make docker-push
+        if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
+        run: make docker-push IMG=ricoberger/vault-secrets-operator:${{ steps.tag.outputs.tag }}
