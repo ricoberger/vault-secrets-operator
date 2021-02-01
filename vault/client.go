@@ -42,9 +42,11 @@ func (c *Client) RenewToken() {
 }
 
 // GetSecret returns the value for a given secret.
-func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool) (map[string][]byte, error) {
+func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, namespace string) (map[string][]byte, error) {
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
+
+	c.client.SetNamespace(namespace)
 
 	// Check if the KVv1 or KVv2 is used for the provided secret and determin
 	// the mount path of the secrets engine.
