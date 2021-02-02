@@ -71,6 +71,10 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 		return nil, err
 	}
 
+	if os.Getenv("VAULT_AUTH_NAMESPACE") != "" {
+		apiClient.SetNamespace(os.Getenv("VAULT_AUTH_NAMESPACE"))
+	}
+
 	// Check which authentication method should be used.
 	if vaultAuthMethod == "token" {
 		// Check the required token and the provided lease duration for the
