@@ -54,6 +54,7 @@ vault:
   kubernetesPath: auth/kubernetes
   kubernetesRole: vault-secrets-operator
   reconciliationTime: 0
+  authNamespace: ""
   namespaces: ""
 
 crd:
