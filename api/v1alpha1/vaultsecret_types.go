@@ -14,7 +14,7 @@ type VaultSecretSpec struct {
 	// vaultRole property is set a new client with the specified Vault Role will be created and the shared client is
 	// ignored. If the operator is configured using the token auth method this property has no effect.
 	VaultRole string `json:"vaultRole,omitempty"`
-	// VaultNamespace can be used t specify the Vault namespace for a secret. When this value is set, the
+	// VaultNamespace can be used to specify the Vault namespace for a secret. When this value is set, the
 	// X-Vault-Namespace header will be set for the request. More information regarding namespaces can be found in the
 	// Vault Enterprise documentation: https://www.vaultproject.io/docs/enterprise/namespaces
 	VaultNamespace string `json:"vaultNamespace,omitempty"`
