@@ -19,6 +19,7 @@
 | `vault.kubernetesRole` | The name of the role which is configured for the Kubernetes auth method. | `vault-secrets-operator` |
 | `vault.reconciliationTime` | The time after which the reconcile function for the CR is rerun. If the value is 0, automatic reconciliation is skipped. | `0` |
 | `vault.namespaces` | Comma serpareted list of namespaces the operator will watch. If empty the operator will watch all namespaces. | `""` |
+| `vault.skipVerifyTrue` | Set to `true` to skip verification of certification authority.  This should only be used in dev for testing. | `false` |
 | `crd.create` | Create the custom resource definition. | `true` |
 | `rbac.create` | Create RBAC object, enable ClusterRole and (Cluster)Role binding creation. | `true` |
 | `rbac.createclusterrole` | Finetune RBAC, enable or disable ClusterRole creation. NOTE: ignored when `rbac.create` not `true`. | `true` |

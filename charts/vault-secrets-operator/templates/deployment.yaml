@@ -60,6 +60,8 @@ spec:
               value: {{ .Values.vault.reconciliationTime | quote }}
             - name: VAULT_AUTH_NAMESPACE
               value: {{ .Values.vault.authNamespace | quote }}
+            - name: VAULT_SKIP_VERIFY
+              value: {{ .Values.vault.skipVerifyTrue }}
             {{- with .Values.environmentVars }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
