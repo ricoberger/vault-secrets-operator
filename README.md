@@ -415,6 +415,31 @@ spec:
 
 > **Note:** This option is only available for the kubernetes auth method and all roles must be added to the auth method before they are used by the operator.
 
+### Using Vault Namespaces
+
+[Vault Namespaces](https://www.vaultproject.io/docs/enterprise/namespaces) is a set of features within Vault Enterprise that allows Vault environments to support Secure Multi-tenancy (or SMT) within a single Vault infrastructure.
+
+The Vault Namespace, which should be used for the authentication of the operator against Vault can be specified via the `VAULT_NAMESPACE` environment variable. In the Helm chart this value can be provided as follows:
+
+```yaml
+environmentVars:
+  - name: VAULT_NAMESPACE
+    value: "my/root/ns"
+```
+
+The operator also supports nested Namespaces. When the `VAULT_NAMESPACE` is set, it is also possible to specify a namespace via the `vaultNamespace` field in the VaultSecret CR:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: kvv1-example-vaultsecret
+spec:
+  vaultNamespace: my/root/ns/team1
+  path: kvv1/example-vaultsecret
+  type: Opaque
+```
+
 ## Development
 
 After modifying the `*_types.go` file always run the following command to update the generated code for that resource type:
