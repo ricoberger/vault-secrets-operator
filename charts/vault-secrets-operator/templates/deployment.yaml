@@ -58,8 +58,6 @@ spec:
               value: {{ .Values.vault.kubernetesRole | quote }}
             - name: VAULT_RECONCILIATION_TIME
               value: {{ .Values.vault.reconciliationTime | quote }}
-            - name: VAULT_AUTH_NAMESPACE
-              value: {{ .Values.vault.authNamespace | quote }}
             {{- with .Values.environmentVars }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
