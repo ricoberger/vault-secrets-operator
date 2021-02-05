@@ -435,10 +435,12 @@ kind: VaultSecret
 metadata:
   name: kvv1-example-vaultsecret
 spec:
-  vaultNamespace: my/root/ns/team1
+  vaultNamespace: team1
   path: kvv1/example-vaultsecret
   type: Opaque
 ```
+
+The Vault Namespace, which is used to get the secret in the above example will be `my/root/ns/team1`.
 
 ## Development
 
