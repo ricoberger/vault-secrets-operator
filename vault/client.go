@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -31,6 +32,14 @@ func (c *Client) RenewToken() {
 	for {
 		log.Info("Renew Vault token")
 
+		// Set the namespace to the value from the VAULT_NAMESPACE environment
+		// variable, because the namespace will always change, when a secret is
+		// requested.
+		rootVaultNamespace := os.Getenv("VAULT_NAMESPACE")
+		if rootVaultNamespace != "" {
+			c.client.SetNamespace(rootVaultNamespace)
+		}
+
 		_, err := c.client.Auth().Token().RenewSelf(c.tokenLeaseDuration)
 		if err != nil {
 			log.Error(err, "Could not renew token")
@@ -42,11 +51,26 @@ func (c *Client) RenewToken() {
 }
 
 // GetSecret returns the value for a given secret.
-func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, namespace string) (map[string][]byte, error) {
+func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 
-	c.client.SetNamespace(namespace)
+	// Check if the vaultNamespace field is set for the secret. If the field is
+	// set we use the configured root namespace from the VAULT_NAMESPACE and
+	// the value from the vaultNamespace field to build the final namespace
+	// path.
+	// If the vaultNamespace field is set, but not the VAULT_NAMESPACE
+	// environment variable we return an error, because the authentication
+	// already failed.
+	if vaultNamespace != "" {
+		rootVaultNamespace := os.Getenv("VAULT_NAMESPACE")
+		if rootVaultNamespace != "" {
+			log.WithValues("rootVaultNamespace", rootVaultNamespace, "vaultNamespace", vaultNamespace).Info(fmt.Sprintf("Use Vault Namespace to read secret %s", path))
+			c.client.SetNamespace(rootVaultNamespace + "/" + vaultNamespace)
+		} else {
+			return nil, fmt.Errorf("vaultNamespace field can not be used, because the VAULT_NAMESPACE environment variable is not set")
+		}
+	}
 
 	// Check if the KVv1 or KVv2 is used for the provided secret and determin
 	// the mount path of the secrets engine.
