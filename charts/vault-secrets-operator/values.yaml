@@ -61,7 +61,7 @@ crd:
 
 rbac:
   create: true
-  createclusterrole: true
+  createrole: true
   namespaced: false
 
 serviceAccount:
