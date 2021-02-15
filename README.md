@@ -135,6 +135,41 @@ vault:
   authMethod: kubernetes
 ```
 
+#### AppRole Auth Method
+
+To use AppRole auth method for the authentication against the Vault API, you need to create a new AppRole.
+
+
+```sh
+# Enable AppRole auth method:
+vault auth enable approle
+
+# AppRole with the previously created policy can be created as follows:
+vault write auth/approle/role/vault-secrets-operator \
+  token_policies=vault-secrets-operator
+
+# Get AppRole ID:
+vault read auth/approle/role/vault-secrets-operator/role-id
+
+# Create a new secret for AppRole:
+vault write -f auth/approle/role/vault-secrets-operator/secret-id
+```
+
+Use the following commands to set the environment variables for the activation of the AppRole auth method:
+```shell
+export VAULT_AUTH_METHOD=approle
+export VAULT_ROLE_ID=
+export VAULT_SECRET_ID=
+export VAULT_TOKEN_MAX_TTL=86400
+```
+
+When you deploy the Vault Secrets Operator via Helm chart you have to set the `vault.authMethod` property to `approle` in the `values.yaml` file, to use the AppRole auth method instead of the default Token auth method.
+
+```yaml
+vault:
+  authMethod: approle
+```
+
 ## Usage
 
 Create two Vault secrets `example-vaultsecret`:
