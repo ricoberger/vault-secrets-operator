@@ -33,12 +33,12 @@ environmentVars: []
   #   value: "30"
 
   # AppRole auth method:
-  # - envName: VAULT_ROLE_ID
+  # - name: VAULT_ROLE_ID
   #   valueFrom:
   #     secretKeyRef:
   #       name: vault-secrets-operator
   #       key: VAULT_ROLE_ID
-  # - envName: VAULT_SECRET_ID
+  # - name: VAULT_SECRET_ID
   #   valueFrom:
   #     secretKeyRef:
   #       name: vault-secrets-operator
