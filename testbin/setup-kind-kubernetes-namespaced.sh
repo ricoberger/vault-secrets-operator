@@ -64,7 +64,7 @@ path "kvv2/data/*" {
 EOF
 vault kv put kvv2/helloworld foo=bar
 
-helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="http://vault.vault.svc.cluster.local:8200" --set vault.authMethod="kubernetes" --set image.repository="localhost:5000/vault-secrets-operator" --set image.tag="test"
+helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="http://vault.vault.svc.cluster.local:8200" --set vault.authMethod="kubernetes" --set image.repository="localhost:5000/vault-secrets-operator" --set image.tag="test" --set rbac.namespaced="true"
 
 export VAULT_SECRETS_OPERATOR_NAMESPACE=$(kubectl get sa --namespace=vault-secrets-operator vault-secrets-operator -o jsonpath="{.metadata.namespace}")
 export VAULT_SECRET_NAME=$(kubectl get sa --namespace=vault-secrets-operator vault-secrets-operator -o jsonpath="{.secrets[*]['name']}")
@@ -81,6 +81,7 @@ apiVersion: ricoberger.de/v1alpha1
 kind: VaultSecret
 metadata:
   name: helloworld
+  namespace: vault-secrets-operator
 spec:
   path: kvv2/helloworld
   type: Opaque
@@ -91,5 +92,5 @@ kubectl wait pod --namespace=vault-secrets-operator -l app.kubernetes.io/instanc
 kubectl delete pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
 kubectl wait pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator --for=condition=Ready --timeout=180s
 sleep 10s
-kubectl get secret helloworld -o yaml
+kubectl get secret --namespace=vault-secrets-operator helloworld -o yaml
 kubectl logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator

@@ -93,4 +93,4 @@ kubectl delete pod --namespace=vault-secrets-operator -l app.kubernetes.io/insta
 kubectl wait pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator --for=condition=Ready --timeout=180s
 sleep 10s
 kubectl get secret helloworld -o yaml
-kubectl  logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
+kubectl logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
