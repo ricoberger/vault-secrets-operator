@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test: [kubernetes-sharedclient, kubernetes-nosharedclient]
+        test: [kubernetes-sharedclient, kubernetes-nosharedclient, kubernetes-namespaced]
     defaults:
       run:
         shell: bash
