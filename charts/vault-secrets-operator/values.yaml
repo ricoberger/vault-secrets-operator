@@ -15,7 +15,9 @@ fullnameOverride: ""
 
 environmentVars: []
   # Set environment variables from a secret. This must be done, if you use the
-  # Token Auth Method of Vault.
+  # Token or AppRole Auth Methods of Vault.
+
+  # Token auth method:
   # - name: VAULT_TOKEN
   #   valueFrom:
   #     secretKeyRef:
@@ -30,20 +32,48 @@ environmentVars: []
   # - name: VAULT_TOKEN_RENEWAL_RETRY_INTERVAL
   #   value: "30"
 
+  # AppRole auth method:
+  # - name: VAULT_ROLE_ID
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: vault-secrets-operator
+  #       key: VAULT_ROLE_ID
+  # - name: VAULT_SECRET_ID
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: vault-secrets-operator
+  #       key: VAULT_SECRET_ID
+  # - name: VAULT_TOKEN_RENEWAL_RETRY_INTERVAL
+  #   value: "30"
+  # - name: VAULT_TOKEN_MAX_TTL
+  #   value: "43200"
+
 # Set the address for vault (by default we assume you are running a dev
 # instance of vault in the same namespace as the operator) and specify the
-# authentication method for the operator.  Possible values are 'token' or
-# 'kubernetes'. If the authentication method is 'kubernetes' the Helm chart
+# authentication method for the operator.  Possible values are 'token',
+# 'kubernetes', or 'approle'.
+
+# If the authentication method is 'kubernetes' the Helm chart
 # ensures that the Service Account included the needed rights. The default path
 # for the Kubernets Auth method is 'auth/kubernetes', if you enabled it under
 # another path you must change the 'kubernetesPath' value. You must also
 # provide the role which should be used for the authentication.
+#
 # If the auth method is 'token' you can specify the 'tokenPath' to read the
 # Vault token from a mounted volume instead of an environment variable.
+#
+# If the auth method is 'approle' you must specify a path for the AppRole Auth
+# method with 'appRolePath', by default it is 'auth/approle'. Also
+# 'VAULT_ROLE_ID' and 'VAULT_SECRET_ID' must be set for this auth method. With
+# this method, the renewal interval is set by default to a half of the token
+# lease duration (can be overwritten with 'VAULT_TOKEN_RENEWAL_INTERVAL'), the
+# token maximum TTL is set by default to 1382400 seconds (16 days, can be
+# overwritten with 'VAULT_TOKEN_MAX_TTL').
+#
 # The reconciliationTime value determines after which time the Vault secret is
 # processed again. This can be used to update a the Kubernetes secret, when the
 # Vault secret changes. A value of 0 will disable the automatic update.
-# You can specify all namespaces the operator should watch. Therefor pass a
+# You can specify all namespaces the operator should watch. Therefore pass a
 # comma separated list via the namespaces value. If the value is empty the operator
 # will watch all namespaces. Namespaces are ignored if rbac.namespaced is set to
 # true, then the namespace of the release will be used
@@ -53,6 +83,7 @@ vault:
   tokenPath: ""
   kubernetesPath: auth/kubernetes
   kubernetesRole: vault-secrets-operator
+  appRolePath: auth/approle
   reconciliationTime: 0
   namespaces: ""
 
