@@ -14,6 +14,9 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
+// RequestToken is a function to request a new Vault token, specific for auth method.
+type RequestToken func(*Client) error
+
 // Client is the structure of our global client for Vault.
 type Client struct {
 	// client is the API client for requests against Vault.
@@ -24,14 +27,18 @@ type Client struct {
 	tokenRenewalInterval float64
 	// tokenRenewalRetryInterval is the time until a failed vault token renewal is retried.
 	tokenRenewalRetryInterval float64
+	// tokenMaxTTL is the maximum lifetime for the token in seconds, after that time a new token
+	// must be requested. Zero means the tokens lives and can be renewed forever.
+	tokenMaxTTL int
+	// requestToken is a function to request a new Vault token, specific for auth method.
+	requestToken RequestToken
 }
 
 // RenewToken renews the provided token after the half of the lease duration is
 // passed, retrying every 30 seconds in case of errors.
 func (c *Client) RenewToken() {
+	started := time.Now()
 	for {
-		log.Info("Renew Vault token")
-
 		// Set the namespace to the value from the VAULT_NAMESPACE environment
 		// variable, because the namespace will always change, when a secret is
 		// requested.
@@ -40,6 +47,23 @@ func (c *Client) RenewToken() {
 			c.client.SetNamespace(rootVaultNamespace)
 		}
 
+		// Request a new token if the actual token lifetime more than the specified maximum
+		// lifetime.
+		elapsed := time.Now().Sub(started).Seconds()
+		if c.tokenMaxTTL > 0 && elapsed >= float64(c.tokenMaxTTL) && c.requestToken != nil {
+			log.Info("Request new Vault token")
+			err := c.requestToken(c)
+			if err != nil {
+				log.Error(err, "Could not request a new token")
+				time.Sleep(time.Duration(c.tokenRenewalRetryInterval) * time.Second)
+			} else {
+				started = time.Now()
+				time.Sleep(time.Duration(c.tokenRenewalInterval) * time.Second)
+			}
+			continue
+		}
+
+		log.Info("Renew Vault token")
 		_, err := c.client.Auth().Token().RenewSelf(c.tokenLeaseDuration)
 		if err != nil {
 			log.Error(err, "Could not renew token")

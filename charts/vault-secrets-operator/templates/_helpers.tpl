@@ -71,23 +71,3 @@ Create the name of the service account to use.
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
-
-{{/*
-Inject the necessary rules for the Service Account, if the authentication method is 'kubernetes'.
-*/}}
-{{- define "vault-secrets-operator.kubernetesAuthRules" -}}
-{{- if eq .Values.vault.authMethod "kubernetes" -}}
-- apiGroups:
-  - authentication.k8s.io
-  resources:
-  - tokenreviews
-  verbs:
-  - create
-- apiGroups:
-  - authorization.k8s.io
-  resources:
-  - subjectaccessreviews
-  verbs:
-  - create
-{{- end -}}
-{{- end -}}

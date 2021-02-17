@@ -1,14 +1,14 @@
-{{ if .Values.rbac.create }}
+{{ if and .Values.rbac.create (eq .Values.vault.authMethod "kubernetes") }}
 apiVersion: rbac.authorization.k8s.io/v1
-kind: {{ if not .Values.rbac.namespaced -}} Cluster {{- end -}} RoleBinding
+kind: ClusterRoleBinding
 metadata:
-  name: {{ template "vault-secrets-operator.fullname" . }}
+  name: {{ template "vault-secrets-operator.fullname" . }}-{{ .Release.Namespace }}
   labels:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: {{ if not .Values.rbac.namespaced -}} Cluster {{- end -}} Role
-  name: vault-secrets-operator
+  kind: ClusterRole
+  name: vault-secrets-operator-{{ .Release.Namespace }}
 subjects:
   - apiGroup: ""
     kind: ServiceAccount

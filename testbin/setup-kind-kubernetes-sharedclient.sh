@@ -64,17 +64,7 @@ path "kvv2/data/*" {
 EOF
 vault kv put kvv2/helloworld foo=bar
 
-# Install the operator via the Helm chart and enable the Kubernetes authentication method for the operator
-if [[ $1 == "kubernetes-sharedclient" ]]; then
-  echo "Use shared client"
-  helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="http://vault.vault.svc.cluster.local:8200" --set vault.authMethod="kubernetes" --set image.repository="localhost:5000/vault-secrets-operator" --set image.tag="test"
-elif [[ $1 == "kubernetes-nosharedclient" ]]; then
-  echo "Do not use shared client"
-  helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="http://vault.vault.svc.cluster.local:8200" --set vault.authMethod="kubernetes" --set vault.kubernetesRole="" --set image.repository="localhost:5000/vault-secrets-operator" --set image.tag="test"
-else
-  echo "Invalid argument"
-  exit 1
-fi
+helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="http://vault.vault.svc.cluster.local:8200" --set vault.authMethod="kubernetes" --set image.repository="localhost:5000/vault-secrets-operator" --set image.tag="test"
 
 export VAULT_SECRETS_OPERATOR_NAMESPACE=$(kubectl get sa --namespace=vault-secrets-operator vault-secrets-operator -o jsonpath="{.metadata.namespace}")
 export VAULT_SECRET_NAME=$(kubectl get sa --namespace=vault-secrets-operator vault-secrets-operator -o jsonpath="{.secrets[*]['name']}")
@@ -86,11 +76,7 @@ vault auth enable kubernetes
 vault write auth/kubernetes/config token_reviewer_jwt="$SA_JWT_TOKEN" kubernetes_host="https://kubernetes.default.svc" kubernetes_ca_cert="$SA_CA_CRT"
 vault write auth/kubernetes/role/vault-secrets-operator bound_service_account_names="vault-secrets-operator" bound_service_account_namespaces="$VAULT_SECRETS_OPERATOR_NAMESPACE" policies=vault-secrets-operator ttl=24h
 
-# Create a VaultSecret for the "helloworld" secret from Vault
-# Install the operator via the Helm chart and enable the Kubernetes authentication method for the operator
-if [[ $1 == "kubernetes-sharedclient" ]]; then
-  echo "Create secret without vaultRole (use shared client)"
-  cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -f -
 apiVersion: ricoberger.de/v1alpha1
 kind: VaultSecret
 metadata:
@@ -99,22 +85,6 @@ spec:
   path: kvv2/helloworld
   type: Opaque
 EOF
-elif [[ $1 == "kubernetes-nosharedclient" ]]; then
-  echo "Create secret with vaultRole (create a new client)"
-  cat <<EOF | kubectl apply -f -
-apiVersion: ricoberger.de/v1alpha1
-kind: VaultSecret
-metadata:
-  name: helloworld
-spec:
-  vaultRole: vault-secrets-operator
-  path: kvv2/helloworld
-  type: Opaque
-EOF
-else
-  echo "Invalid argument"
-  exit 1
-fi
 
 # Delete the operator Pod to use the newly configured Service Account and check if the operator created a Kubernetes secret for our example
 kubectl wait pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator --for=condition=Ready --timeout=180s
@@ -122,4 +92,4 @@ kubectl delete pod --namespace=vault-secrets-operator -l app.kubernetes.io/insta
 kubectl wait pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator --for=condition=Ready --timeout=180s
 sleep 10s
 kubectl get secret helloworld -o yaml
-kubectl  logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
+kubectl logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator

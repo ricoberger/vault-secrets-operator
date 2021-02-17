@@ -1,81 +1,21 @@
-{{ if and .Values.rbac.create .Values.rbac.createclusterrole }}
+{{ if and .Values.rbac.create (eq .Values.vault.authMethod "kubernetes") }}
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind:  ClusterRole
 metadata:
-  name: vault-secrets-operator
+  name: vault-secrets-operator-{{ .Release.Namespace }}
   labels:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
 rules:
-{{ include "vault-secrets-operator.kubernetesAuthRules" . | indent 2 }}
   - apiGroups:
-    - ""
+    - authentication.k8s.io
     resources:
-    - configmaps
+    - tokenreviews
     verbs:
     - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
   - apiGroups:
-    - ""
+    - authorization.k8s.io
     resources:
-    - configmaps/status
-    verbs:
-    - get
-    - patch
-    - update
-  - apiGroups:
-    - ""
-    resources:
-    - events
+    - subjectaccessreviews
     verbs:
     - create
-    - patch
-  - apiGroups:
-    - ""
-    resources:
-    - secrets
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
-  - apiGroups:
-    - ricoberger.de
-    resources:
-    - vaultsecrets
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
-  - apiGroups:
-    - ricoberger.de
-    resources:
-    - vaultsecrets/finalizers
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - update
-    - watch
-  - apiGroups:
-    - ricoberger.de
-    resources:
-    - vaultsecrets/status
-    verbs:
-    - get
-    - patch
-    - update
 {{ end }}

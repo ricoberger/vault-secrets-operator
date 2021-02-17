@@ -56,6 +56,8 @@ spec:
               value: {{ .Values.vault.kubernetesPath | quote }}
             - name: VAULT_KUBERNETES_ROLE
               value: {{ .Values.vault.kubernetesRole | quote }}
+            - name: VAULT_APP_ROLE_PATH
+              value: {{ .Values.vault.appRolePath | quote }}
             - name: VAULT_RECONCILIATION_TIME
               value: {{ .Values.vault.reconciliationTime | quote }}
             {{- with .Values.environmentVars }}
