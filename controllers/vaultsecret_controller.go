@@ -102,7 +102,12 @@ func (r *VaultSecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	// Define a new Secret object
-	secret := newSecretForCR(instance, data)
+	secret, err := newSecretForCR(instance, data)
+	if err != nil {
+		// Error while creating the Kubernetes secret - requeue the request.
+		log.Error(err, "Could not create Kubernetes secret")
+		return ctrl.Result{}, err
+	}
 
 	// Set VaultSecret instance as the owner and controller
 	err = ctrl.SetControllerReference(instance, secret, r.Scheme)
@@ -171,7 +176,7 @@ type templateContext struct {
 	Annotations map[string]string
 }
 
-// runTemplate executes a template with the given secrets map, filled with the Vault secres
+// runTemplate executes a template with the given secrets map, filled with the Vault secrets
 func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[string][]byte) ([]byte, error) {
 	// Set up the context
 	sd := templateContext{
@@ -184,6 +189,7 @@ func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[
 		Labels:      cr.Labels,
 		Annotations: cr.Annotations,
 	}
+
 	// For templating, these should all be strings, convert
 	for k, v := range secrets {
 		sd.Secrets[k] = string(v)
@@ -206,42 +212,46 @@ func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[
 	tmplParser.Delims("{%", "%}")
 
 	t, err := tmplParser.Parse(tmpl)
-
 	if err != nil {
 		return nil, err
 	}
+
 	var bout bytes.Buffer
 	err = t.Execute(&bout, sd)
 	if err != nil {
 		return nil, err
 	}
+
 	return bout.Bytes(), nil
 }
 
-// newSecretForCR returns a secret with the same name/namespace as the cr
-func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte) *corev1.Secret {
+// newSecretForCR returns a secret with the same name/namespace as the CR. The secret will include all labels and
+// annotations from the CR.
+func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte) (*corev1.Secret, error) {
 	labels := map[string]string{
 		"created-by": "vault-secrets-operator",
 	}
 	for k, v := range cr.ObjectMeta.Labels {
 		labels[k] = v
 	}
+
 	annotations := map[string]string{}
 	for k, v := range cr.ObjectMeta.Annotations {
 		annotations[k] = v
 	}
+
 	if cr.Spec.Templates != nil {
 		newdata := make(map[string][]byte)
-		for tk, tv := range cr.Spec.Templates {
-			// Template 'tv'
-			if templated, terr := runTemplate(cr, tv, data); terr == nil {
-				newdata[tk] = templated
-			} else {
-				newdata[tk] = []byte(fmt.Sprintf("# Template ERROR: %s", terr))
+		for k, v := range cr.Spec.Templates {
+			templated, err := runTemplate(cr, v, data)
+			if err != nil {
+				return nil, fmt.Errorf("Template ERROR: %w", err)
 			}
+			newdata[k] = templated
 		}
 		data = newdata
 	}
+
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        cr.Name,
@@ -251,7 +261,7 @@ func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte
 		},
 		Data: data,
 		Type: cr.Spec.Type,
-	}
+	}, nil
 }
 
 func mergeSecretData(new, found *corev1.Secret) *corev1.Secret {
