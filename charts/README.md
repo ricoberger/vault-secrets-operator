@@ -39,3 +39,9 @@
 | `serviceMonitor.honorLabels` | Honor labels option. | `true` |
 | `serviceMonitor.relabelings` | Additional relabeling config for the ServiceMonitor. | `[]` |
 | `priorityClassName` | Optionally attach priority class to pod spec. | `null` |
+| `initContainer.enabled` | Enable the creation of an init container to wait until Vault is available before starting. | `false` |
+| `initContainer.vaultService` | The name of the Vault service to wait for. | `vault-active` |
+| `initContainer.vaultNamespace` | The namespace in which the Vault service is located. | `default` |
+| `initContainer.repository` | The repository of the init container Docker image. | `busybox` |
+| 'initContainer.tag` | The tag of the init container Docker image which should be used.` | `stable` |
+

@@ -31,6 +31,12 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ template "vault-secrets-operator.serviceAccountName" . }}
+      {{- if .Values.initContainer.enabled }}
+      initContainers:
+        - name: wait-for-vault
+          image: "{{ .Values.initContainer.repository }}:{{ .Values.initContainer.tag }}"
+          command: ['sh', '-c', 'until nslookup {{ .Values.initContainer.vaultService }}.{{ .Values.initContainer.vaultNamespace }}.svc.cluster.local; do echo waiting for Vault; sleep 2; done;']
+      {{- end}} 
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

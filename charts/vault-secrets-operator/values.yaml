@@ -141,3 +141,10 @@ serviceMonitor:
 
 # A priority class can be optionally attached to the pod spec if one is needed
 # priorityClassName: high
+
+initContainer:
+  enabled: false
+  vaultService: vault-active
+  vaultNamespace: default
+  repository: busybox
+  tag: stable
