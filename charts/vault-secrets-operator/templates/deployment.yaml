@@ -41,10 +41,12 @@ spec:
             - --enable-leader-election
           env:
             - name: WATCH_NAMESPACE
-            {{- if .Values.rbac.namespaced }}
+            {{- if .Values.vault.namespaces }}
+              value: {{ .Values.vault.namespaces | quote }}
+            {{- else if .Values.rbac.namespaced }}
               value: {{ .Release.Namespace | quote }}
             {{- else }}
-              value: {{ .Values.vault.namespaces | quote }}
+              value: ""
             {{- end }}
             - name: VAULT_ADDRESS
               value: {{ .Values.vault.address | quote }}
