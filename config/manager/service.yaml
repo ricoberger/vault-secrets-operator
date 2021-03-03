@@ -6,9 +6,9 @@ spec:
   type: ClusterIP
   ports:
   - port: 8080
-    targetPort: metrics
+    targetPort: http-metrics
     protocol: TCP
-    name: metrics
+    name: http-metrics
   - port: 8081
     targetPort: http
     protocol: TCP

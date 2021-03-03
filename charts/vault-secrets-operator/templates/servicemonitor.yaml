@@ -12,7 +12,7 @@ spec:
   endpoints:
     - interval: {{ .Values.serviceMonitor.interval }}
       scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
-      port: metrics
+      port: http-metrics
       path: "/metrics"
       honorLabels: {{ .Values.serviceMonitor.honorLabels }}
       {{- if .Values.serviceMonitor.relabelings }}
