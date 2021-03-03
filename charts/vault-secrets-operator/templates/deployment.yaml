@@ -38,7 +38,7 @@ spec:
           command:
             - /manager
           args:
-            - --enable-leader-election
+            - -leader-elect
           env:
             - name: WATCH_NAMESPACE
             {{- if .Values.vault.namespaces }}
@@ -66,7 +66,7 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
-            - name: metrics
+            - name: http-metrics
               containerPort: 8080
               protocol: TCP
             - name: http

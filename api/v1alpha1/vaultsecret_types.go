@@ -5,9 +5,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // VaultSecretSpec defines the desired state of VaultSecret
 type VaultSecretSpec struct {
 	// VaultRole can be used to specify the Vault role, which should be used to get the secret from Vault. If the
@@ -59,8 +56,6 @@ type VaultSecretSpec struct {
 
 // VaultSecretStatus defines the observed state of VaultSecret
 type VaultSecretStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true
