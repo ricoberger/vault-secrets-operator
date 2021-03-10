@@ -69,6 +69,9 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	var errInvalidSecretData = fmt.Errorf("invalid secret data")
+	var errSecretIsNil = fmt.Errorf("secret is nil")
+
 	// Get secret from Vault.
 	// If the VaultSecret contains the vaulRole property we are creating a new client with the specified Vault Role to
 	// get the secret.
@@ -88,7 +91,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
-			if instance.Spec.Jks.Type == "truststore" && (fmt.Sprint(err) == "secret is nil" || fmt.Sprint(err) == "invalid secret data") {
+			if instance.Spec.Jks.Type == "truststore" && (reflect.DeepEqual(err, errSecretIsNil) || reflect.DeepEqual(err, errInvalidSecretData)) {
 				log.Info("Could not get secret from vault, but moving on to create/update default truststore...")
 				// make an empty slice, so that creating truststore won't fail
 				data = make(map[string][]byte)
@@ -109,7 +112,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		data, err = vault.SharedClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
-			if instance.Spec.Jks.Type == "truststore" && (fmt.Sprint(err) == "secret is nil" || fmt.Sprint(err) == "invalid secret data") {
+			if instance.Spec.Jks.Type == "truststore" && (reflect.DeepEqual(err, errSecretIsNil) || reflect.DeepEqual(err, errInvalidSecretData)) {
 				log.Info("Could not get secret from vault, but moving on to create/update default truststore...")
 				// make an empty slice, so that creating truststore won't fail
 				data = make(map[string][]byte)
