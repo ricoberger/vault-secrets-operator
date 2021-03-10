@@ -252,19 +252,22 @@ func createBaseTruststore(client *vault.Client) (keystore.KeyStore, error) {
 	}
 
 	// add all pki ca certs required
-	for _, vaultCaCertPath := range vaultCaCertPaths {
+	if len(vaultCaCertPaths[0]) != 0 {
+		for _, vaultCaCertPath := range vaultCaCertPaths {
 
-		caCert, err := client.GetCaCert(vaultCaCertPath)
-		if err != nil {
-			log.Error(err, "can't read base vault Ca Cert at ", vaultCaCertPath)
-			return nil, err
-		}
+			fmt.Println("here3")
+			caCert, err := client.GetCaCert(vaultCaCertPath)
+			if err != nil {
+				log.Error(err, "can't read base vault Ca Cert at ", vaultCaCertPath)
+				return nil, err
+			}
 
-		baseTruststore["pz_vault:"+vaultCaCertPath] = &keystore.TrustedCertificateEntry{
-			Entry: keystore.Entry{
-				CreationTime: time.Now(),
-			},
-			Certificate: *caCert,
+			baseTruststore[strings.Replace(vaultCaCertPath, "/", "", -1)+":"+vaultCaCertPath] = &keystore.TrustedCertificateEntry{
+				Entry: keystore.Entry{
+					CreationTime: time.Now(),
+				},
+				Certificate: *caCert,
+			}
 		}
 	}
 
