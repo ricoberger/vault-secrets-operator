@@ -82,6 +82,9 @@ func (c *Client) RenewToken() {
 
 // GetSecret returns the value for a given secret.
 func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
+	if path == "" {
+		return nil, fmt.Errorf("path field is nil")
+	}
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 

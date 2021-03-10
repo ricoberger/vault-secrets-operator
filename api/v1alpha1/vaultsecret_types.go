@@ -40,7 +40,8 @@ type VaultSecretSpec struct {
 	// under Secret.data.
 	Templates map[string]string `json:"templates,omitempty"`
 	// Path is the path of the corresponding secret in Vault.
-	Path string `json:"path"`
+	// +kubebuilder:validation:Optional
+	Path string `json:"path",omitempty`
 	// SecretEngine specifies the type of the Vault secret engine in which the
 	// secret is stored. Currently the 'KV Secrets Engine - Version 1' and
 	// 'KV Secrets Engine - Version 2' are supported. The value must be 'kv'. If

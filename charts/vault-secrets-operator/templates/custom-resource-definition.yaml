@@ -126,7 +126,6 @@ spec:
                   if the Vault secret changes.
                 type: integer
             required:
-            - path
             - type
             type: object
           status:
