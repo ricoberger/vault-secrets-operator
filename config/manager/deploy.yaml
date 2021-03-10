@@ -36,6 +36,8 @@ spec:
           value: "86400"
         - name: VAULT_RECONCILIATION_TIME
           value: "0"
+        - name: VAULT_CA_CERT_PATHS
+          value: ""
         ports:
         - name: http-metrics
           containerPort: 8080

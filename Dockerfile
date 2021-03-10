@@ -1,3 +1,4 @@
+FROM centos:8 as cacerts
 # Build the manager binary
 FROM golang:1.13 as builder
 
@@ -14,6 +15,7 @@ COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
 COPY vault/ vault/
+COPY jks/ jks/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
@@ -23,6 +25,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager 
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
+COPY --from=cacerts /etc/pki/java/cacerts .
 USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]

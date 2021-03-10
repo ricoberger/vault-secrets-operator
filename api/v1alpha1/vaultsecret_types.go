@@ -5,6 +5,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// JksSpec defines the JKS, and whether to create or not.
+type JksSpec struct {
+	// Type of Jks, could be 'keystore' or 'truststore'. This would also dictate what's in vault secret.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=keystore;truststore
+	Type string `json:"type"`
+	// Name of keystore/truststore. Eg. keystore.jks, truststore.jks, ...
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+}
+
 // VaultSecretSpec defines the desired state of VaultSecret
 type VaultSecretSpec struct {
 	// VaultRole can be used to specify the Vault role, which should be used to get the secret from Vault. If the
@@ -52,6 +63,9 @@ type VaultSecretSpec struct {
 	// get double encoded. This flag will skip the base64 encode which is needed
 	// for string data to avoid the double encode problem.
 	IsBinary bool `json:"isBinary,omitempty"`
+	// Indicates whether or not the k8s secret that will be created
+	// will create a keystore/truststore key off of the keys in the vault path.
+	Jks JksSpec `json:"jks,omitempty"`
 }
 
 // VaultSecretStatus defines the observed state of VaultSecret

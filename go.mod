@@ -11,6 +11,7 @@ require (
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
+	github.com/pavel-v-chernykh/keystore-go/v3 v3.1.0 // indirect
 	k8s.io/api v0.19.2
 	k8s.io/apimachinery v0.19.2
 	k8s.io/client-go v0.19.2

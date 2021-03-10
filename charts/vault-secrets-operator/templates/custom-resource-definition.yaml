@@ -46,6 +46,26 @@ spec:
                   encode which is needed for string data to avoid the double encode
                   problem.
                 type: boolean
+              jks:
+                description: Indicates whether or not the k8s secret that will be
+                  created will create a keystore/truststore key off of the keys in
+                  the vault path.
+                properties:
+                  name:
+                    description: Name of keystore/truststore. Eg. keystore.jks, truststore.jks,
+                      ...
+                    type: string
+                  type:
+                    description: Type of Jks, could be 'keystore' or 'truststore'.
+                      This would also dictate what's in vault secret.
+                    enum:
+                    - keystore
+                    - truststore
+                    type: string
+                required:
+                - name
+                - type
+                type: object
               keys:
                 description: Keys is an array of Keys, which should be included in
                   the Kubernetes secret. If the Keys field is ommitted all keys from
