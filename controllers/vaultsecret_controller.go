@@ -5,10 +5,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
+	"strings"
 	"text/template"
 	"time"
 
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
+	"github.com/ricoberger/vault-secrets-operator/jks"
 	"github.com/ricoberger/vault-secrets-operator/vault"
 
 	"github.com/Masterminds/sprig"
@@ -67,6 +70,10 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	var errInvalidSecretData = fmt.Errorf("invalid secret data")
+	var errSecretIsNil = fmt.Errorf("secret is nil")
+	var errSecretPathIsNil = fmt.Errorf("path field is nil")
+
 	// Get secret from Vault.
 	// If the VaultSecret contains the vaulRole property we are creating a new client with the specified Vault Role to
 	// get the secret.
@@ -75,9 +82,10 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// client during start up, to not require a default Vault Role.
 	var data map[string][]byte
 
+	var vaultClient *vault.Client
 	if instance.Spec.VaultRole != "" {
 		log.WithValues("vaultRole", instance.Spec.VaultRole).Info("Create client to get secret from Vault")
-		vaultClient, err := vault.CreateClient(instance.Spec.VaultRole)
+		vaultClient, err = vault.CreateClient(instance.Spec.VaultRole)
 		if err != nil {
 			// Error creating the Vault client - requeue the request.
 			return ctrl.Result{}, err
@@ -85,12 +93,19 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
-			log.Error(err, "Could not get secret from vault")
-			return ctrl.Result{}, err
+			if instance.Spec.Jks.Type == "truststore" && (reflect.DeepEqual(err, errSecretIsNil) || reflect.DeepEqual(err, errInvalidSecretData) || reflect.DeepEqual(err, errSecretPathIsNil)) {
+				log.Info("Could not get secret from vault, but moving on to create/update default truststore...")
+				// make an empty slice, so that creating truststore won't fail
+				data = make(map[string][]byte)
+			} else {
+				log.Error(err, "Could not get secret from vault")
+				return ctrl.Result{}, err
+			}
 		}
 	} else {
 		log.Info("Use shared client to get secret from Vault")
-		if vault.SharedClient == nil {
+		vaultClient = vault.SharedClient
+		if vaultClient == nil {
 			err = fmt.Errorf("shared client not initilized and vaultRole property missing")
 			log.Error(err, "Could not get secret from Vault")
 			return ctrl.Result{}, err
@@ -99,8 +114,14 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		data, err = vault.SharedClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
-			log.Error(err, "Could not get secret from vault")
-			return ctrl.Result{}, err
+			if instance.Spec.Jks.Type == "truststore" && (reflect.DeepEqual(err, errSecretIsNil) || reflect.DeepEqual(err, errInvalidSecretData) || reflect.DeepEqual(err, errSecretPathIsNil)) {
+				log.Info("Could not get secret from vault, but moving on to create/update default truststore...")
+				// make an empty slice, so that creating truststore won't fail
+				data = make(map[string][]byte)
+			} else {
+				log.Error(err, "Could not get secret from vault")
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
@@ -123,6 +144,12 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err = r.Get(ctx, types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
 		log.Info("Creating a new Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+
+		data, err := getDataBasedOnSecretCategory(instance, secret, secret.Data, vaultClient)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		secret.Data = data
 		err = r.Create(ctx, secret)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -137,6 +164,13 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Secret already exists, update the secret
 	// Merge -> Checks the existing data keys and merge them into the updated secret
 	// Replace -> Do not check the data keys and replace the secret
+
+	data, err = getDataBasedOnSecretCategory(instance, found, secret.Data, vaultClient)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	secret.Data = data
+
 	if instance.Spec.ReconcileStrategy == "Merge" {
 		secret = mergeSecretData(secret, found)
 
@@ -276,4 +310,36 @@ func mergeSecretData(new, found *corev1.Secret) *corev1.Secret {
 	}
 
 	return new
+}
+
+func getDataBasedOnSecretCategory(cr *ricobergerdev1alpha1.VaultSecret, secret *corev1.Secret, data map[string][]byte, client *vault.Client) (map[string][]byte, error) {
+	if cr.Spec.Jks.Type == "keystore" || cr.Spec.Jks.Type == "truststore" {
+		var jksName string
+		jksType := cr.Spec.Jks.Type
+
+		if cr.Spec.Jks.Name != "" {
+			jksName = cr.Spec.Jks.Name
+			if !strings.HasSuffix(jksName, ".jks") {
+				jksName += ".jks"
+			}
+		} else {
+			jksName = jksType + ".jks"
+		}
+
+		jksPassName := strings.Replace(jksName, ".jks", "Pass", 1)
+
+		keystore, keystorePass, err := jks.GetKeystoreFromSecret(secret, data, jksName, jksPassName, jksType, client)
+		if err != nil {
+			return nil, err
+		}
+
+		// replace 'data' which is secret key map from vault, with keystore
+		// and keystore pass map, to be placed in k8s secret.
+		newData := make(map[string][]byte)
+		newData[jksName] = keystore
+		newData[jksPassName] = []byte(keystorePass)
+		data = newData
+	}
+	return data, nil
+
 }

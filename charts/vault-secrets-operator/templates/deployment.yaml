@@ -62,6 +62,8 @@ spec:
               value: {{ .Values.vault.appRolePath | quote }}
             - name: VAULT_RECONCILIATION_TIME
               value: {{ .Values.vault.reconciliationTime | quote }}
+            - name: VAULT_CA_CERT_PATHS
+              value: {{ .Values.vault.caCertPaths | quote }}
             {{- with .Values.environmentVars }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

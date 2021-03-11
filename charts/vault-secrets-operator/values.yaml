@@ -77,6 +77,11 @@ environmentVars: []
 # comma separated list via the namespaces value. If the value is empty the operator
 # will watch all namespaces. If the value is empty and rbac.namespaced is set to
 # true, then the namespace of the release will be used.
+#
+# If the PKI secrets engine is enabled on vault, and vault acts as a CA and issues
+# certs, the caCertPaths is a comma separated list of paths where the root Cert can
+# be retrieved. For example, /pki/ca/pem. This can be used to import these Root Certs
+# into the JKS Truststore when created.
 vault:
   address: "http://vault:8200"
   authMethod: token
@@ -86,6 +91,7 @@ vault:
   appRolePath: auth/approle
   reconciliationTime: 0
   namespaces: ""
+  caCertPaths: ""
 
 crd:
   create: true

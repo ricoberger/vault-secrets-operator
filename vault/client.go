@@ -3,6 +3,7 @@ package vault
 import (
 	b64 "encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	keystore "github.com/pavel-v-chernykh/keystore-go/v3"
 )
 
 // RequestToken is a function to request a new Vault token, specific for auth method.
@@ -80,6 +82,9 @@ func (c *Client) RenewToken() {
 
 // GetSecret returns the value for a given secret.
 func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
+	if path == "" {
+		return nil, fmt.Errorf("path field is nil")
+	}
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 
@@ -282,4 +287,27 @@ func (c *Client) addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 		p = strings.TrimPrefix(p, mountPath)
 		return path.Join(mountPath, apiPrefix, p)
 	}
+}
+
+// GetCaCert returns the ca cert at given pki path.
+func (c *Client) GetCaCert(path string) (*keystore.Certificate, error) {
+
+	secret, err := c.client.Logical().Read(path)
+	if err != nil {
+		log.Info("could not read ca cert at: " + path)
+		return nil, err
+	}
+
+	certString, ok := secret.Data["certificate"].(string)
+	if !ok {
+		return nil, fmt.Errorf("could not parse secret")
+	}
+	block, _ := pem.Decode([]byte(certString))
+
+	cert := &keystore.Certificate{
+		Type:    "X.509",
+		Content: block.Bytes,
+	}
+
+	return cert, nil
 }
