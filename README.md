@@ -477,6 +477,78 @@ spec:
 
 The Vault Namespace, which is used to get the secret in the above example will be `my/root/ns/team1`.
 
+### Create JKS (Keystore|Truststore) in K8s Secrets
+
+Rather than creating k8s secrets which mirror the keys in vault, or even templating entries off of them, The Operator can also create k8s secrets with JKS Entries (keystore and random password). This can come in handy when applications/deployments need:
+1. To connect to other services and authenticate via Client Certificates (case Keystore).
+2. To connect to other services whose Server Certificates were not issued by a Trusted Root (case Truststore), be it an extenral service or an internal one where the Vault instance itself acts as the PKI.
+
+The environment variable `VAULT_CA_CERT_PATHS` can be set in the operator runtime, and defines comma-separated paths declaring where the root certs (which vault's PKI has) are served. for example `/pki/cert/ca`
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: kvv1-example-vaultsecret
+spec:
+  jks:
+    name: (Optional) (defaults to keystore.jks|truststore.jks)
+    type: (Required) keystore|truststore
+  path: (Required, but Optional when type is truststore) kvv1/example-vaultsecret
+  type: Opaque
+```
+
+The resulting secret will look like:
+
+```yaml
+apiVersion: v1
+data:
+  keystore.jks: <BASE64_ENCODED_JKS>
+  keystorePass: <BASE64_ENCODED_JKS_PASS>
+kind: Secret
+metadata:
+  labels:
+    created-by: vault-secrets-operator
+  name: kvv1-example-vaultsecret
+type: Opaque
+```
+
+or as below, for type truststore:
+
+```yaml
+apiVersion: v1
+data:
+  truststore.jks: <BASE64_ENCODED_JKS>
+  truststorePass: <BASE64_ENCODED_JKS_PASS>
+kind: Secret
+metadata:
+  labels:
+    created-by: vault-secrets-operator
+  name: kvv1-example-vaultsecret
+type: Opaque
+```
+
+> Note: for creating Keystores and Truststores, the Priv.keys/certs in vault need to be RSA, and PEM encoded. Below is are examples:
+
+```yaml
+-----BEGIN RSA PRIVATE KEY-----
+.
+.
+-----END RSA PRIVATE KEY-----
+-----BEGIN CERTIFICATE-----
+.
+.
+-----END CERTIFICATE-----
+
+```
+
+```yaml
+-----BEGIN CERTIFICATE-----
+.
+.
+-----END CERTIFICATE-----
+```
+
 ## Development
 
 After modifying the `*_types.go` file always run the following command to update the generated code for that resource type:
