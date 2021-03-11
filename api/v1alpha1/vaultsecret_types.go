@@ -12,8 +12,8 @@ type JksSpec struct {
 	// +kubebuilder:validation:Enum=keystore;truststore
 	Type string `json:"type"`
 	// Name of keystore/truststore. Eg. keystore.jks, truststore.jks, ...
-	// +kubebuilder:validation:Required
-	Name string `json:"name"`
+	// +kubebuilder:validation:Optional
+	Name string `json:"name,omitempty"`
 }
 
 // VaultSecretSpec defines the desired state of VaultSecret

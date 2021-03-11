@@ -314,8 +314,18 @@ func mergeSecretData(new, found *corev1.Secret) *corev1.Secret {
 
 func getDataBasedOnSecretCategory(cr *ricobergerdev1alpha1.VaultSecret, secret *corev1.Secret, data map[string][]byte, client *vault.Client) (map[string][]byte, error) {
 	if cr.Spec.Jks.Type == "keystore" || cr.Spec.Jks.Type == "truststore" {
+		var jksName string
 		jksType := cr.Spec.Jks.Type
-		jksName := cr.Spec.Jks.Name
+
+		if cr.Spec.Jks.Name != "" {
+			jksName = cr.Spec.Jks.Name
+			if !strings.HasSuffix(jksName, ".jks") {
+				jksName += ".jks"
+			}
+		} else {
+			jksName = jksType + ".jks"
+		}
+
 		jksPassName := strings.Replace(jksName, ".jks", "Pass", 1)
 
 		keystore, keystorePass, err := jks.GetKeystoreFromSecret(secret, data, jksName, jksPassName, jksType, client)
