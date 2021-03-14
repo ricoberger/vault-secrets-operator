@@ -20,7 +20,7 @@ spec:
       - command:
         - /manager
         args:
-        - --enable-leader-election
+        - -leader-elect
         image: ricoberger/vault-secrets-operator:1.13.0
         name: manager
         env:
@@ -37,7 +37,7 @@ spec:
         - name: VAULT_RECONCILIATION_TIME
           value: "0"
         ports:
-        - name: metrics
+        - name: http-metrics
           containerPort: 8080
           protocol: TCP
         - name: http

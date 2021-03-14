@@ -5,9 +5,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // VaultSecretSpec defines the desired state of VaultSecret
 type VaultSecretSpec struct {
 	// VaultRole can be used to specify the Vault role, which should be used to get the secret from Vault. If the
@@ -59,14 +56,19 @@ type VaultSecretSpec struct {
 
 // VaultSecretStatus defines the observed state of VaultSecret
 type VaultSecretStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
 // VaultSecret is the Schema for the vaultsecrets API
+// +kubebuilder:printcolumn:name="Succeeded",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].status`,description="Indicates if the secret was created/updated successfully"
+// +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].reason`,description="Reason for the current status"
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].message`,description="Message with more information, regarding the current status"
+// +kubebuilder:printcolumn:name="Last Transition",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].lastTransitionTime`,description="Time when the condition was updated the last time"
+// +kubebuilder:printcolumn:name="Age",type=string,JSONPath=`.metadata.creationTimestamp`,description="Time when this VaultSecret was created"
+// +kubebuilder:subresource:status
 type VaultSecret struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

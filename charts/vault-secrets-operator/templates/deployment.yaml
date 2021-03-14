@@ -38,13 +38,15 @@ spec:
           command:
             - /manager
           args:
-            - --enable-leader-election
+            - -leader-elect
           env:
             - name: WATCH_NAMESPACE
-            {{- if .Values.rbac.namespaced }}
+            {{- if .Values.vault.namespaces }}
+              value: {{ .Values.vault.namespaces | quote }}
+            {{- else if .Values.rbac.namespaced }}
               value: {{ .Release.Namespace | quote }}
             {{- else }}
-              value: {{ .Values.vault.namespaces | quote }}
+              value: ""
             {{- end }}
             - name: VAULT_ADDRESS
               value: {{ .Values.vault.address | quote }}
@@ -64,7 +66,7 @@ spec:
             {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
-            - name: metrics
+            - name: http-metrics
               containerPort: 8080
               protocol: TCP
             - name: http
