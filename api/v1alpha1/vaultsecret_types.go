@@ -66,8 +66,8 @@ type VaultSecretStatus struct {
 // +kubebuilder:printcolumn:name="Succeeded",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].status`,description="Indicates if the secret was created/updated successfully"
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].reason`,description="Reason for the current status"
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].message`,description="Message with more information, regarding the current status"
-// +kubebuilder:printcolumn:name="Last Transition",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].lastTransitionTime`,description="Time when the condition was updated the last time"
-// +kubebuilder:printcolumn:name="Age",type=string,JSONPath=`.metadata.creationTimestamp`,description="Time when this VaultSecret was created"
+// +kubebuilder:printcolumn:name="Last Transition",type=date,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].lastTransitionTime`,description="Time when the condition was updated the last time"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Time when this VaultSecret was created"
 // +kubebuilder:subresource:status
 type VaultSecret struct {
 	metav1.TypeMeta   `json:",inline"`
