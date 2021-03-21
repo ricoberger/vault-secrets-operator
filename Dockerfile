@@ -16,7 +16,7 @@ COPY controllers/ controllers/
 COPY vault/ vault/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
+RUN CGO_ENABLED=0 GO111MODULE=on go build -a -o manager main.go
 
 FROM alpine:3.13.0
 RUN apk update && apk add --no-cache ca-certificates
