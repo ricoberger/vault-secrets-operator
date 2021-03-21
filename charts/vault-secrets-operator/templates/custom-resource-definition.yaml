@@ -33,11 +33,11 @@ spec:
     - description: Time when the condition was updated the last time
       jsonPath: .status.conditions[?(@.type=="SecretCreated")].lastTransitionTime
       name: Last Transition
-      type: string
+      type: date
     - description: Time when this VaultSecret was created
       jsonPath: .metadata.creationTimestamp
       name: Age
-      type: string
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
