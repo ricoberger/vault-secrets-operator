@@ -63,6 +63,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultRoleID := os.Getenv("VAULT_ROLE_ID")
 	vaultSecretID := os.Getenv("VAULT_SECRET_ID")
 	vaultTokenMaxTTL := os.Getenv("VAULT_TOKEN_MAX_TTL")
+	vaultNamespace := os.Getenv("VAULT_NAMESPACE")
 
 	// Create new Vault configuration. This configuration is used to create the
 	// API client. We set the timeout of the HTTP client to 10 seconds.
@@ -124,6 +125,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenLeaseDuration:        tokenLeaseDuration,
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
+			rootVaultNamespace:        vaultNamespace,
 		}, nil
 	}
 
@@ -182,6 +184,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenLeaseDuration:        tokenLeaseDuration,
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
+			rootVaultNamespace:        vaultNamespace,
 		}, nil
 	}
 
@@ -241,6 +244,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			tokenMaxTTL:               tokenMaxTTL,
+			rootVaultNamespace:        vaultNamespace,
 			requestToken: func(c *Client) error {
 				secret, err := apiClient.Logical().Write(appRolePath+"/login", data)
 				if err != nil {
