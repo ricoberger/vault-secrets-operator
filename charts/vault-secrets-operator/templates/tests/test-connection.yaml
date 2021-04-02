@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args:  ['{{ include "vault-secrets-operator.fullname" . }}:8081']
+      args:  ['{{ include "vault-secrets-operator.fullname" . }}:8081/healthz']
   restartPolicy: Never
