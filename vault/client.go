@@ -69,7 +69,11 @@ func (c *Client) RenewToken() {
 			log.Error(err, "Could not renew token")
 
 			lookup, err := c.client.Auth().Token().LookupSelf()
-			log.WithValues("error", err.Error()).Info(fmt.Sprintf("Token information: %#v", lookup))
+			if err != nil {
+				log.WithValues("error", err.Error()).Info("LookupSelf failed")
+			} else {
+				log.Info(fmt.Sprintf("Token information: %#v", lookup))
+			}
 
 			time.Sleep(time.Duration(c.tokenRenewalRetryInterval) * time.Second)
 		} else {
