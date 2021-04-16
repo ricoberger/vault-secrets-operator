@@ -105,6 +105,12 @@ podAnnotations: {}
 # Additional labels for the vault-secrets-operator pod(s).
 podLabels: {}
 
+# Annotations for the vault-secrets-operator-test-connection pod
+testPodAnnotations: {}
+
+# Additional labels for the vault-secrets-operator-test-connection pod
+testPodLabels: {}
+
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little

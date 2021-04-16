@@ -28,6 +28,8 @@
 | `serviceAccount.name` | The name of the service account, which should be created/used by the operator. | `vault-secrets-operator` |
 | `podAnnotations` | Annotations for vault-secrets-operator pod(s). | `{}` |
 | `podLabels` | Additional labels for the vault-secrets-operator pod(s). | `{}` |
+| `testPodAnnotations` | Annotations for vault-secrets-operator-test-connection pod. | `{}` |
+| `testPodLabels` | Additional labels for the vault-secrets-operator-test-connection pod. | `{}` |
 | `resources` | Set resources for the operator. | `{}` |
 | `volumes` | Provide additional volumns for the container. | `[]` |
 | `nodeSelector` | Set a node selector. | `{}` |
