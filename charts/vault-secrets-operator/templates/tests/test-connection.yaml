@@ -6,6 +6,7 @@ metadata:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
   annotations:
     "helm.sh/hook": test-success
+{{ include "vault-secrets-operator.annotations" . | indent 4 }}
 spec:
   containers:
     - name: wget
