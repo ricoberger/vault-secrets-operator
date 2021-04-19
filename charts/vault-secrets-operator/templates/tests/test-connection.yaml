@@ -4,8 +4,10 @@ metadata:
   name: "{{ include "vault-secrets-operator.fullname" . }}-test-connection"
   labels:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
+{{ include "vault-secrets-operator.testPodLabels" . | indent 4 }}
   annotations:
     "helm.sh/hook": test-success
+{{ include "vault-secrets-operator.testPodAnnotations" . | indent 4 }}
 spec:
   containers:
     - name: wget
