@@ -152,3 +152,4 @@ tests:
   busybox:
     image:
       repository: busybox
+      tag: latest
