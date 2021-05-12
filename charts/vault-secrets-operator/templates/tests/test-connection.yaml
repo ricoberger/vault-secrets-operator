@@ -11,7 +11,7 @@ metadata:
 spec:
   containers:
     - name: wget
-      image: busybox
+      image: {{ .Values.tests.busybox.image.repository }}
       command: ['wget']
       args:  ['{{ include "vault-secrets-operator.fullname" . }}:8081/healthz']
   restartPolicy: Never
