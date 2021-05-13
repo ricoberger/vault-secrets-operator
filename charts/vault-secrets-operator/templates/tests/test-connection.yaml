@@ -9,6 +9,10 @@ metadata:
     "helm.sh/hook": test-success
 {{ include "vault-secrets-operator.testPodAnnotations" . | indent 4 }}
 spec:
+  {{- with .Values.tests.imagePullSecrets }}
+  imagePullSecrets:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
   containers:
     - name: wget
       image: {{ .Values.tests.busybox.image.repository }}:{{ .Values.tests.busybox.image.tag }}
