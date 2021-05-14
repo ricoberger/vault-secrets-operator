@@ -105,6 +105,10 @@ podAnnotations: {}
 # Additional labels for the vault-secrets-operator pod(s).
 podLabels: {}
 
+podSecurityContext: {}
+
+securityContext: {}
+
 # Annotations for the vault-secrets-operator-test-connection pod
 testPodAnnotations: {}
 
