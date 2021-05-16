@@ -147,3 +147,11 @@ serviceMonitor:
 
 # A priority class can be optionally attached to the pod spec if one is needed
 # priorityClassName: high
+
+tests:
+  # imagePullSecrets:
+  # - imagePullSecret
+  busybox:
+    image:
+      repository: busybox
+      tag: latest
