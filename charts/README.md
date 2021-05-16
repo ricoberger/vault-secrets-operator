@@ -27,6 +27,8 @@
 | `serviceAccount.create` | Create the service account. | `true` |
 | `serviceAccount.name` | The name of the service account, which should be created/used by the operator. | `vault-secrets-operator` |
 | `podAnnotations` | Annotations for vault-secrets-operator pod(s). | `{}` |
+| `podSecurityContext`: | Security context policies to add to the operator pod. | `{}` |
+| `securityContext`: | Security context policies to add to the containers. | `{}` |
 | `podLabels` | Additional labels for the vault-secrets-operator pod(s). | `{}` |
 | `testPodAnnotations` | Annotations for vault-secrets-operator-test-connection pod. | `{}` |
 | `testPodLabels` | Additional labels for the vault-secrets-operator-test-connection pod. | `{}` |
