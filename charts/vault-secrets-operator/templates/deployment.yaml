@@ -90,6 +90,7 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+        {{- include "vault-secrets-operator.additionalContainers" . | nindent 8 }}
       {{- with .Values.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}
