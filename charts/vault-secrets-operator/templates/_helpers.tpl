@@ -62,6 +62,24 @@ Additional pod annotations
 {{- end -}}
 
 {{/*
+Additional test-connection pod annotations
+*/}}
+{{- define "vault-secrets-operator.testPodAnnotations" -}}
+{{- if .Values.testPodAnnotations }}
+{{- toYaml .Values.testPodAnnotations }}
+{{- end }}
+{{- end }}
+
+{{/*
+Additional test-connection pod labels
+*/}}
+{{- define "vault-secrets-operator.testPodLabels" -}}
+{{- if .Values.testPodLabels }}
+{{- toYaml .Values.testPodLabels }}
+{{- end }}
+{{- end }}
+
+{{/*
 Create the name of the service account to use.
 */}}
 {{- define "vault-secrets-operator.serviceAccountName" -}}
@@ -70,4 +88,10 @@ Create the name of the service account to use.
 {{- else -}}
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Additional containers to add to the deployment
+*/}}
+{{- define "vault-secrets-operator.additionalContainers" -}}
 {{- end -}}

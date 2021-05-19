@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -32,6 +31,8 @@ type Client struct {
 	tokenMaxTTL int
 	// requestToken is a function to request a new Vault token, specific for auth method.
 	requestToken RequestToken
+	// vault namespace
+	rootVaultNamespace string
 }
 
 // RenewToken renews the provided token after the half of the lease duration is
@@ -42,9 +43,8 @@ func (c *Client) RenewToken() {
 		// Set the namespace to the value from the VAULT_NAMESPACE environment
 		// variable, because the namespace will always change, when a secret is
 		// requested.
-		rootVaultNamespace := os.Getenv("VAULT_NAMESPACE")
-		if rootVaultNamespace != "" {
-			c.client.SetNamespace(rootVaultNamespace)
+		if c.rootVaultNamespace != "" {
+			c.client.SetNamespace(c.rootVaultNamespace)
 		}
 
 		// Request a new token if the actual token lifetime more than the specified maximum
@@ -69,7 +69,11 @@ func (c *Client) RenewToken() {
 			log.Error(err, "Could not renew token")
 
 			lookup, err := c.client.Auth().Token().LookupSelf()
-			log.WithValues("error", err.Error()).Info(fmt.Sprintf("Token information: %#v", lookup))
+			if err != nil {
+				log.WithValues("error", err.Error()).Info("LookupSelf failed")
+			} else {
+				log.Info(fmt.Sprintf("Token information: %#v", lookup))
+			}
 
 			time.Sleep(time.Duration(c.tokenRenewalRetryInterval) * time.Second)
 		} else {
@@ -86,18 +90,20 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 	// Check if the vaultNamespace field is set for the secret. If the field is
 	// set we use the configured root namespace from the VAULT_NAMESPACE and
 	// the value from the vaultNamespace field to build the final namespace
-	// path.
+	// path. If the field is not set but VAULT_NAMESPACE has a value, we
+	// just use the latter.
 	// If the vaultNamespace field is set, but not the VAULT_NAMESPACE
 	// environment variable we return an error, because the authentication
 	// already failed.
-	if vaultNamespace != "" {
-		rootVaultNamespace := os.Getenv("VAULT_NAMESPACE")
-		if rootVaultNamespace != "" {
-			log.WithValues("rootVaultNamespace", rootVaultNamespace, "vaultNamespace", vaultNamespace).Info(fmt.Sprintf("Use Vault Namespace to read secret %s", path))
-			c.client.SetNamespace(rootVaultNamespace + "/" + vaultNamespace)
+	if c.rootVaultNamespace != "" {
+		log.WithValues("rootVaultNamespace", c.rootVaultNamespace, "vaultNamespace", vaultNamespace).Info(fmt.Sprintf("Use Vault Namespace to read secret %s", path))
+		if vaultNamespace != "" {
+			c.client.SetNamespace(c.rootVaultNamespace + "/" + vaultNamespace)
 		} else {
-			return nil, fmt.Errorf("vaultNamespace field can not be used, because the VAULT_NAMESPACE environment variable is not set")
+			c.client.SetNamespace(c.rootVaultNamespace)
 		}
+	} else if c.rootVaultNamespace == "" && vaultNamespace != "" {
+		return nil, fmt.Errorf("vaultNamespace field can not be used, because the VAULT_NAMESPACE environment variable is not set")
 	}
 
 	// Check if the KVv1 or KVv2 is used for the provided secret and determin

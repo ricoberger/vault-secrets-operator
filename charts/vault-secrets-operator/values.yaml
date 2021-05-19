@@ -3,7 +3,7 @@ deploymentStrategy: {}
 
 image:
   repository: ricoberger/vault-secrets-operator
-  tag: 1.14.0
+  tag: 1.14.4
   pullPolicy: IfNotPresent
   volumeMounts: []
     # - name: ca
@@ -105,6 +105,16 @@ podAnnotations: {}
 # Additional labels for the vault-secrets-operator pod(s).
 podLabels: {}
 
+podSecurityContext: {}
+
+securityContext: {}
+
+# Annotations for the vault-secrets-operator-test-connection pod
+testPodAnnotations: {}
+
+# Additional labels for the vault-secrets-operator-test-connection pod
+testPodLabels: {}
+
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
@@ -141,3 +151,11 @@ serviceMonitor:
 
 # A priority class can be optionally attached to the pod spec if one is needed
 # priorityClassName: high
+
+tests:
+  # imagePullSecrets:
+  # - imagePullSecret
+  busybox:
+    image:
+      repository: busybox
+      tag: latest

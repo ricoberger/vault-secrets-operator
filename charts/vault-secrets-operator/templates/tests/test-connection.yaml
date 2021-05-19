@@ -4,12 +4,18 @@ metadata:
   name: "{{ include "vault-secrets-operator.fullname" . }}-test-connection"
   labels:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
+{{ include "vault-secrets-operator.testPodLabels" . | indent 4 }}
   annotations:
     "helm.sh/hook": test-success
+{{ include "vault-secrets-operator.testPodAnnotations" . | indent 4 }}
 spec:
+  {{- with .Values.tests.imagePullSecrets }}
+  imagePullSecrets:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
   containers:
     - name: wget
-      image: busybox
+      image: {{ .Values.tests.busybox.image.repository }}:{{ .Values.tests.busybox.image.tag }}
       command: ['wget']
-      args:  ['{{ include "vault-secrets-operator.fullname" . }}:8686']
+      args:  ['{{ include "vault-secrets-operator.fullname" . }}:8081/healthz']
   restartPolicy: Never
