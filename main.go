@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -17,7 +18,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 )
@@ -105,11 +105,26 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
-	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+	err = mgr.AddHealthzCheck("healthz", func(req *http.Request) error {
+		if vault.SharedClient == nil {
+			return nil
+		}
+
+		return vault.SharedClient.GetHealth(10)
+	})
+	if err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+
+	err = mgr.AddReadyzCheck("readyz", func(req *http.Request) error {
+		if vault.SharedClient == nil {
+			return nil
+		}
+
+		return vault.SharedClient.GetHealth(5)
+	})
+	if err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
