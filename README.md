@@ -170,6 +170,29 @@ vault:
   authMethod: approle
 ```
 
+### Client-side restriction
+
+It is possible to add client-side restrictions by matching the VaultSecret path with a list of prefixes or limit them
+to paths prefixed with the VaultSecret namespace. This is in addition to the more secure server-side Vault policies.
+
+To use this in the Helm chart modify the `values.yaml` file as follows:
+
+```yaml
+environmentVars:
+  - name: VAULT_ALLOW_PREFIXES
+    value: common,default
+  - name: VAULT_ALLOW_NAMESPACE_PREFIX
+    value: true
+```
+
+This would limit the operator to only create Secrets for paths matching:
+
+```
+secret/common/*
+secret/default/*
+secret/{VaultSecret.metadata.namespace}/*
+```
+
 ## Usage
 
 Create two Vault secrets `example-vaultsecret`:

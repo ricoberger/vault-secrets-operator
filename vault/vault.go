@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/vault/api"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -64,6 +65,8 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultSecretID := os.Getenv("VAULT_SECRET_ID")
 	vaultTokenMaxTTL := os.Getenv("VAULT_TOKEN_MAX_TTL")
 	vaultNamespace := os.Getenv("VAULT_NAMESPACE")
+	vaultAllowPrefixes := os.Getenv("VAULT_ALLOW_PREFIXES")
+	vaultAllowNamespacePrefix := os.Getenv("VAULT_ALLOW_NAMESPACE_PREFIX")
 
 	// Create new Vault configuration. This configuration is used to create the
 	// API client. We set the timeout of the HTTP client to 10 seconds.
@@ -238,6 +241,9 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		apiClient.SetToken(secret.Auth.ClientToken)
 
+		allowPrefixes := strings.Split(vaultAllowPrefixes, ",")
+		allowNamespacePrefix, _ := strconv.ParseBool(vaultAllowNamespacePrefix)
+
 		return &Client{
 			client:                    apiClient,
 			tokenLeaseDuration:        tokenLeaseDuration,
@@ -245,6 +251,8 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			tokenMaxTTL:               tokenMaxTTL,
 			rootVaultNamespace:        vaultNamespace,
+			allowPrefixes:             allowPrefixes,
+			allowNamespacePrefix:      allowNamespacePrefix,
 			requestToken: func(c *Client) error {
 				secret, err := apiClient.Logical().Write(appRolePath+"/login", data)
 				if err != nil {
