@@ -95,7 +95,15 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
-		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
+		data, err = vaultClient.GetSecret(
+			instance.Spec.SecretEngine,
+			instance.Spec.Path,
+			instance.Spec.Keys,
+			instance.Spec.Version,
+			instance.Spec.IsBinary,
+			instance.Spec.VaultNamespace,
+			instance.GetObjectMeta().GetNamespace(),
+		)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
 			log.Error(err, "Could not get secret from vault")
@@ -111,7 +119,16 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		data, err = vault.SharedClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
+		data,
+			err = vault.SharedClient.GetSecret(
+			instance.Spec.SecretEngine,
+			instance.Spec.Path,
+			instance.Spec.Keys,
+			instance.Spec.Version,
+			instance.Spec.IsBinary,
+			instance.Spec.VaultNamespace,
+			instance.GetObjectMeta().GetNamespace(),
+		)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
 			log.Error(err, "Could not get secret from vault")
