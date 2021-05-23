@@ -180,9 +180,9 @@ To use this in the Helm chart modify the `values.yaml` file as follows:
 ```yaml
 environmentVars:
   - name: VAULT_ALLOW_PREFIXES
-    value: common,default
+    value: "common,default"
   - name: VAULT_ALLOW_NAMESPACE_PREFIX
-    value: true
+    value: "true"
 ```
 
 This would limit the operator to only create Secrets for paths matching:
