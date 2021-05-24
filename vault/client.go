@@ -33,6 +33,9 @@ type Client struct {
 	requestToken RequestToken
 	// vault namespace
 	rootVaultNamespace string
+	// failedRenewTokenAttempts is the number of failed renew token attempts, if the renew token function fails 5 times
+	// the liveness probe will fail, to force a restart of the operator.
+	failedRenewTokenAttempts int
 }
 
 // RenewToken renews the provided token after the half of the lease duration is
@@ -55,8 +58,10 @@ func (c *Client) RenewToken() {
 			err := c.requestToken(c)
 			if err != nil {
 				log.Error(err, "Could not request a new token")
+				c.failedRenewTokenAttempts = c.failedRenewTokenAttempts + 1
 				time.Sleep(time.Duration(c.tokenRenewalRetryInterval) * time.Second)
 			} else {
+				c.failedRenewTokenAttempts = 0
 				started = time.Now()
 				time.Sleep(time.Duration(c.tokenRenewalInterval) * time.Second)
 			}
@@ -67,19 +72,22 @@ func (c *Client) RenewToken() {
 		_, err := c.client.Auth().Token().RenewSelf(c.tokenLeaseDuration)
 		if err != nil {
 			log.Error(err, "Could not renew token")
-
-			lookup, err := c.client.Auth().Token().LookupSelf()
-			if err != nil {
-				log.WithValues("error", err.Error()).Info("LookupSelf failed")
-			} else {
-				log.Info(fmt.Sprintf("Token information: %#v", lookup))
-			}
-
+			c.failedRenewTokenAttempts = c.failedRenewTokenAttempts + 1
 			time.Sleep(time.Duration(c.tokenRenewalRetryInterval) * time.Second)
 		} else {
+			c.failedRenewTokenAttempts = 0
 			time.Sleep(time.Duration(c.tokenRenewalInterval) * time.Second)
 		}
 	}
+}
+
+// GetHealth checks if the failedRenewTokenAttempts hits the given thresholds. If this is the case an error is returned.
+func (c *Client) GetHealth(threshold int) error {
+	if c.failedRenewTokenAttempts >= threshold {
+		return fmt.Errorf("Renew Vault token failed %d times", c.failedRenewTokenAttempts)
+	}
+
+	return nil
 }
 
 // GetSecret returns the value for a given secret.
