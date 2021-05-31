@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -36,10 +37,8 @@ type Client struct {
 	// failedRenewTokenAttempts is the number of failed renew token attempts, if the renew token function fails 5 times
 	// the liveness probe will fail, to force a restart of the operator.
 	failedRenewTokenAttempts int
-	// allowPrefixes restricts getting secrets to a limited set of prefixes
-	allowPrefixes []string
-	// allowNamespacePrefix adds the VaultSecret.metadata.namespace to allowPrefixes
-	allowNamespacePrefix bool
+	// allowedPath restricts getting secrets to the paths that match this regex
+	allowedPath string
 }
 
 // RenewToken renews the provided token after the half of the lease duration is
@@ -130,25 +129,14 @@ func (c *Client) GetSecret(
 	// operator to add client-side restictions on top of the Vault (server-side)
 	// policies.
 	// For example:
-	//   c.allowPrefixes = ['common']
-	//   c.allowNamepacePrefix = true
+	//   c.allowedPath = '(common|{{namespace}})/.*'
 	// Restricts the operator to getting secrets from:
 	//   /secret/data/common
-	//   /secret/data/$NAMESPACE/
-	allowPrefixes := c.allowPrefixes
-	if c.allowNamespacePrefix {
-		allowPrefixes = append(allowPrefixes, secretNamespace)
-	}
-	if len(allowPrefixes) > 0 {
-		allow := false
-		for _, prefix := range allowPrefixes {
-			if strings.HasPrefix(path, prefix+"/") {
-				allow = true
-				break
-			}
-		}
-		if !allow {
-			return nil, fmt.Errorf("path %s does not have an allowed prefix %s", path, allowPrefixes)
+	//   /secret/data/$secretNamespace/
+	if c.allowedPath != "" {
+		allowedPathRegex := regexp.MustCompile(strings.ReplaceAll(c.allowedPath, "{{namespace}}", secretNamespace))
+		if !allowedPathRegex.MatchString(path) {
+			return nil, fmt.Errorf("path %s does not have an allowed prefix %s", path, c.allowedPath)
 		}
 	}
 
