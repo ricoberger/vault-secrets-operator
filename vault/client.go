@@ -125,7 +125,7 @@ func (c *Client) GetSecret(
 		return nil, fmt.Errorf("vaultNamespace field can not be used, because the VAULT_NAMESPACE environment variable is not set")
 	}
 
-	// Check whether the `path` starts with an allowed prefix. This allows the
+	// Check whether the `path` matches with the allowed path. This allows the
 	// operator to add client-side restictions on top of the Vault (server-side)
 	// policies.
 	// For example:
