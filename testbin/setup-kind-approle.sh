@@ -118,6 +118,6 @@ spec:
 EOF
 
 kubectl wait pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator --for=condition=Ready --timeout=180s
-sleep 10s
+sleep 30s
 kubectl get secret helloworld -o yaml
 kubectl logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
