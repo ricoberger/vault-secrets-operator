@@ -20,7 +20,6 @@
 | `vault.appRolePath` | If the AppRole auth method is used, this is the path where the AppRole auth method is enabled. | `auth/approle` |
 | `vault.reconciliationTime` | The time after which the reconcile function for the CR is rerun. If the value is 0, automatic reconciliation is skipped. | `0` |
 | `vault.namespaces` | Comma serpareted list of namespaces the operator will watch. If empty the operator will watch all namespaces. | `""` |
-| `crd.create` | Create the custom resource definition. | `true` |
 | `rbac.create` | Create RBAC object, enable (Cluster)Role and (Cluster)Role binding creation. | `true` |
 | `rbac.createrole` | Finetune RBAC, enable or disable (Cluster)Role creation. NOTE: ignored when `rbac.create` is not `true`. | `true` |
 | `rbac.namespaced` | Deploy in isolated namespace. Creates RoleBinding instead of a ClusterRoleBinding | `false` |

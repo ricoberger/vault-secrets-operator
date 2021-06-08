@@ -87,9 +87,6 @@ vault:
   reconciliationTime: 0
   namespaces: ""
 
-crd:
-  create: true
-
 rbac:
   create: true
   createrole: true
