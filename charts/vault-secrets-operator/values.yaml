@@ -78,7 +78,7 @@ environmentVars: []
 # will watch all namespaces. If the value is empty and rbac.namespaced is set to
 # true, then the namespace of the release will be used.
 vault:
-  address: "http://vault:8200"
+  address: ""
   authMethod: token
   tokenPath: ""
   kubernetesPath: auth/kubernetes
