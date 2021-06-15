@@ -52,8 +52,10 @@ spec:
             {{- else }}
               value: ""
             {{- end }}
+            {{- if .Values.vault.address }}
             - name: VAULT_ADDRESS
               value: {{ .Values.vault.address | quote }}
+            {{- end }}
             - name: VAULT_AUTH_METHOD
               value: {{ .Values.vault.authMethod | quote }}
             - name: VAULT_TOKEN_PATH
