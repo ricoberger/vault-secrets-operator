@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -36,6 +37,8 @@ type Client struct {
 	// failedRenewTokenAttempts is the number of failed renew token attempts, if the renew token function fails 5 times
 	// the liveness probe will fail, to force a restart of the operator.
 	failedRenewTokenAttempts int
+	// allowedPath restricts getting secrets to the paths that match this regex
+	allowedPath string
 }
 
 // RenewToken renews the provided token after the half of the lease duration is
@@ -91,7 +94,15 @@ func (c *Client) GetHealth(threshold int) error {
 }
 
 // GetSecret returns the value for a given secret.
-func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
+func (c *Client) GetSecret(
+	secretEngine string,
+	path string,
+	keys []string,
+	version int,
+	isBinary bool,
+	vaultNamespace string,
+	secretNamespace string,
+) (map[string][]byte, error) {
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 
@@ -112,6 +123,21 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 		}
 	} else if c.rootVaultNamespace == "" && vaultNamespace != "" {
 		return nil, fmt.Errorf("vaultNamespace field can not be used, because the VAULT_NAMESPACE environment variable is not set")
+	}
+
+	// Check whether the `path` matches with the allowed path. This allows the
+	// operator to add client-side restictions on top of the Vault (server-side)
+	// policies.
+	// For example:
+	//   c.allowedPath = '(common|{{namespace}})/.*'
+	// Restricts the operator to getting secrets from:
+	//   /secret/data/common
+	//   /secret/data/$secretNamespace/
+	if c.allowedPath != "" {
+		allowedPathRegex := regexp.MustCompile(strings.ReplaceAll(c.allowedPath, "{{namespace}}", secretNamespace))
+		if !allowedPathRegex.MatchString(path) {
+			return nil, fmt.Errorf("path %s does not have an allowed prefix %s", path, c.allowedPath)
+		}
 	}
 
 	// Check if the KVv1 or KVv2 is used for the provided secret and determin

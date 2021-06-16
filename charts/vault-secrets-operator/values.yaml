@@ -47,6 +47,12 @@ environmentVars: []
   #   value: "30"
   # - name: VAULT_TOKEN_MAX_TTL
   #   value: "43200"
+  #
+  # Client-side restrictions:
+  # - name: VAULT_ALLOW_PREFIXES
+  #   value: "common,default"
+  # - name: VAULT_ALLOW_NAMESPACE_PREFIX
+  #   value: "true"
 
 # Set the address for vault (by default we assume you are running a dev
 # instance of vault in the same namespace as the operator) and specify the
