@@ -84,6 +84,8 @@ vault:
   kubernetesPath: auth/kubernetes
   kubernetesRole: vault-secrets-operator
   appRolePath: auth/approle
+  azurePath: auth/azure
+  azureRole: default
   reconciliationTime: 0
   namespaces: ""
 
