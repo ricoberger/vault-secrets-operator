@@ -296,7 +296,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 		data["role"] = vaultAzureRole
 		data["subscription_id"] = metadata.SubscriptionId
 		data["resource_group_name"] = metadata.ResourceGroupName
-		if vaultAzureIsScaleset {
+		if vaultAzureIsScaleset == "true" {
 			data["vmss_name"] = metadata.VMssName
 		} else {
 			data["vm_name"] = metadata.VMName
