@@ -170,6 +170,19 @@ vault:
   authMethod: approle
 ```
 
+### Azure Auth Method
+
+You can use the managed system identity provided on aks cluster to authenticate against the Vault API, to do that you will need to setup an auth backend as described [here](https://www.vaultproject.io/docs/auth/azure)
+Then you can setup the auth method with the following environment variables:
+```shell
+export VAULT_AUTH_METHOD=azure
+export VAULT_AZURE_PATH=auth/azure
+export VAULT_AZURE_ROLE=default
+export VAULT_AZURE_ISSCALESET=true # Set this to true if the kubernetes nodes are in a vmss and not isolated vm (default in aks)
+```
+
+If you deploy the Vault Secrets Operator via Helm you have to set the `vault.authMethod`, `vault.azurepath`, `vault.azureRole`, `vault.azureScaleset` values in the `values.yaml` file.
+
 ## Usage
 
 Create two Vault secrets `example-vaultsecret`:

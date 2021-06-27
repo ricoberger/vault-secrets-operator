@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/leosayous21/go-azure-msi/msi"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -60,6 +61,9 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultTokenRenewalRetryInterval := os.Getenv("VAULT_TOKEN_RENEWAL_RETRY_INTERVAL")
 	vaultKubernetesPath := os.Getenv("VAULT_KUBERNETES_PATH")
 	vaultAppRolePath := os.Getenv("VAULT_APP_ROLE_PATH")
+	vaultAzurePath := os.Getenv("VAULT_AZURE_PATH")
+	vaultAzureRole := os.Getenv("VAULT_AZURE_ROLE")
+	vaultAzureIsScaleset := os.Getenv("VAULT_AZURE_ISSCALESET")
 	vaultRoleID := os.Getenv("VAULT_ROLE_ID")
 	vaultSecretID := os.Getenv("VAULT_SECRET_ID")
 	vaultTokenMaxTTL := os.Getenv("VAULT_TOKEN_MAX_TTL")
@@ -262,5 +266,75 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 		}, nil
 	}
 
+	if vaultAuthMethod == "azure" {
+		// Check the required mount path and role for the Kubernetes Auth
+		// Method. If one of the env variable is missing we return an error.
+		if vaultAzurePath == "" {
+			vaultAzurePath = "auth/azure"
+		}
+
+		// For the shared client the Vault role must be specified via the VAULT_KUBERNETES_ROLE environment variable.
+		// If this environment variable is missing we return nil instead of an error, because the operator will work as
+		// usual, when each secret specifies the vaultRole property.
+		if vaultAzureRole == "" {
+			vaultAzureRole = "default"
+		}
+
+		// Read the service account token value and create a map for the
+		// authentication against Vault.
+		msiToken, err := msi.GetMsiToken()
+		if err != nil {
+			return nil, err
+		}
+		metadata, err := msi.GetInstanceMetadata()
+		if err != nil {
+			return nil, err
+		}
+
+		data := make(map[string]interface{})
+		data["jwt"] = string(msiToken.AccessToken)
+		data["role"] = vaultAzureRole
+		data["subscription_id"] = metadata.SubscriptionId
+		data["resource_group_name"] = metadata.ResourceGroupName
+		if vaultAzureIsScaleset == "true" {
+			data["vmss_name"] = metadata.VMssName
+		} else {
+			data["vm_name"] = metadata.VMName
+		}
+
+		// Authenticate against vault using the Azure Auth Method and set
+		// the token which the client should use for further interactions with
+		// Vault. We also set the lease duration of the token for the renew
+		// function.
+		secret, err := apiClient.Logical().Write(vaultAzurePath+"/login", data)
+		if err != nil {
+			return nil, err
+		} else if secret.Auth == nil {
+			return nil, fmt.Errorf("missing authentication information")
+		}
+
+		tokenLeaseDuration := secret.Auth.LeaseDuration
+
+		tokenRenewalInterval, err := strconv.ParseFloat(vaultTokenRenewalInterval, 64)
+		if err != nil {
+			tokenRenewalInterval = float64(tokenLeaseDuration) * 0.5
+		}
+
+		tokenRenewalRetryInterval, err := strconv.ParseFloat(vaultTokenRenewalRetryInterval, 64)
+		if err != nil {
+			tokenRenewalRetryInterval = 30.0
+		}
+
+		apiClient.SetToken(secret.Auth.ClientToken)
+
+		return &Client{
+			client:                    apiClient,
+			tokenLeaseDuration:        tokenLeaseDuration,
+			tokenRenewalInterval:      tokenRenewalInterval,
+			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
+			rootVaultNamespace:        vaultNamespace,
+		}, nil
+
+	}
 	return nil, fmt.Errorf("invalid authentication method")
 }

@@ -3,7 +3,7 @@ deploymentStrategy: {}
 
 image:
   repository: ricoberger/vault-secrets-operator
-  tag: 1.14.4
+  tag: 1.14.5
   pullPolicy: IfNotPresent
   volumeMounts: []
     # - name: ca
@@ -78,17 +78,16 @@ environmentVars: []
 # will watch all namespaces. If the value is empty and rbac.namespaced is set to
 # true, then the namespace of the release will be used.
 vault:
-  address: "http://vault:8200"
+  address: ""
   authMethod: token
   tokenPath: ""
   kubernetesPath: auth/kubernetes
   kubernetesRole: vault-secrets-operator
   appRolePath: auth/approle
+  azurePath: auth/azure
+  azureRole: default
   reconciliationTime: 0
   namespaces: ""
-
-crd:
-  create: true
 
 rbac:
   create: true
