@@ -68,6 +68,13 @@ spec:
               value: {{ .Values.vault.appRolePath | quote }}
             - name: VAULT_RECONCILIATION_TIME
               value: {{ .Values.vault.reconciliationTime | quote }}
+            - name: VAULT_AZURE_PATH
+              value: {{ .Values.vault.azurePath | quote }}
+            - name: VAULT_AZURE_ROLE
+              value: {{ .Values.vault.azureRole | quote }}
+            - name: VAULT_AZURE_ISSCALESET
+              value: {{ .Values.vault.azureScaleset | quote }}
+
             {{- with .Values.environmentVars }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
