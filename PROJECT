@@ -3,10 +3,12 @@ layout: go.kubebuilder.io/v3
 projectName: vault-secrets-operator
 repo: github.com/ricoberger/vault-secrets-operator
 resources:
-- group: ricoberger.de
+- domain: ricoberger.de
+  group: ricoberger.de
   kind: VaultSecret
+  path: github.com/ricoberger/vault-secrets-operator/api/v1alpha1
   version: v1alpha1
-version: 3-alpha
+version: "3"
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}

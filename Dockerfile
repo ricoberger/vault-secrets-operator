@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.13 as builder
+FROM golang:1.16 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -18,7 +18,7 @@ COPY vault/ vault/
 # Build
 RUN CGO_ENABLED=0 GO111MODULE=on go build -a -o manager main.go
 
-FROM alpine:3.13.0
+FROM alpine:3.14.2
 RUN apk update && apk add --no-cache ca-certificates
 WORKDIR /
 COPY --from=builder /workspace/manager .
