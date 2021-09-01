@@ -165,6 +165,9 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 	// string, which can be used for the Kubernetes secret.
 	data := make(map[string][]byte)
 	for key, value := range secretData {
+		if value == nil {
+			continue
+		}
 		if len(keys) == 0 || contains(key, keys) {
 			switch value.(type) {
 			case map[string]interface{}:
