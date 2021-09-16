@@ -3,6 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind:  {{ if not .Values.rbac.namespaced -}} Cluster {{- end -}} Role
 metadata:
   name: vault-secrets-operator
+  namespace: {{ .Release.Namespace }}
   labels:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
 rules:
