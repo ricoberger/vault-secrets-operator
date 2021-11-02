@@ -18,9 +18,9 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
-  image: kindest/node:v1.20.7
+  image: kindest/node:v1.21.2
 - role: worker
-  image: kindest/node:v1.20.7
+  image: kindest/node:v1.21.2
 containerdConfigPatches:
 - |-
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${reg_port}"]
@@ -53,7 +53,7 @@ kubectl create ns vault-secrets-operator
 
 # Install Vault in the cluster and create a new secret engine for the operator
 helm repo add hashicorp https://helm.releases.hashicorp.com
-helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.10.0 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.7.0"
+helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.17.1 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.8.4"
 
 sleep 10s
 kubectl wait pod/vault-0 --namespace=vault  --for=condition=Ready --timeout=180s
