@@ -57,7 +57,9 @@ func main() {
 		os.Exit(1)
 	} else {
 		if vault.SharedClient != nil {
-			go vault.SharedClient.RenewToken()
+			if vault.SharedClient.PerformRenewToken() {
+				go vault.SharedClient.RenewToken()
+			}
 		} else {
 			ctrl.Log.Info("Shared client wasn't initialized, each secret must be use the vaultRole property")
 		}

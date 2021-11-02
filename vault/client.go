@@ -22,6 +22,10 @@ type Client struct {
 	client *api.Client
 	// tokenLeaseDuration is the lease duration of the token for the interaction with vault.
 	tokenLeaseDuration int
+	// renewToken is whether the operator should renew its own token
+	// to be used when a service external to the operator renews the token itself
+	// defaults to true 
+	renewToken bool
 	// tokenRenewalInterval is the time between two successive vault token renewals.
 	tokenRenewalInterval float64
 	// tokenRenewalRetryInterval is the time until a failed vault token renewal is retried.
@@ -36,6 +40,11 @@ type Client struct {
 	// failedRenewTokenAttempts is the number of failed renew token attempts, if the renew token function fails 5 times
 	// the liveness probe will fail, to force a restart of the operator.
 	failedRenewTokenAttempts int
+}
+
+// PerformRenewToken returns whether the operator should renew its token
+func (c *Client) PerformRenewToken() bool {
+	return c.renewToken
 }
 
 // RenewToken renews the provided token after the half of the lease duration is

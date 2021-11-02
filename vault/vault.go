@@ -57,6 +57,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultToken := os.Getenv("VAULT_TOKEN")
 	vaultTokenPath := os.Getenv("VAULT_TOKEN_PATH")
 	vaultTokenLeaseDuration := os.Getenv("VAULT_TOKEN_LEASE_DURATION")
+	vaultRenewToken := os.Getenv("VAULT_RENEW_TOKEN")
 	vaultTokenRenewalInterval := os.Getenv("VAULT_TOKEN_RENEWAL_INTERVAL")
 	vaultTokenRenewalRetryInterval := os.Getenv("VAULT_TOKEN_RENEWAL_RETRY_INTERVAL")
 	vaultKubernetesPath := os.Getenv("VAULT_KUBERNETES_PATH")
@@ -111,6 +112,11 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			return nil, err
 		}
 
+		renewToken, err := strconv.ParseBool(vaultRenewToken)
+		if err == nil {
+			renewToken = true
+		}
+
 		tokenRenewalInterval, err := strconv.ParseFloat(vaultTokenRenewalInterval, 64)
 		if err != nil {
 			tokenRenewalInterval = float64(tokenLeaseDuration) * 0.5
@@ -126,6 +132,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		return &Client{
 			client:                    apiClient,
+			renewToken:                renewToken,
 			tokenLeaseDuration:        tokenLeaseDuration,
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
