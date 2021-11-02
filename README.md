@@ -109,6 +109,7 @@ vault auth enable kubernetes
 
 # Tell Vault how to communicate with the Kubernetes cluster
 vault write auth/kubernetes/config \
+  issuer="https://kubernetes.default.svc.cluster.local" \
   token_reviewer_jwt="$SA_JWT_TOKEN" \
   kubernetes_host="$K8S_HOST" \
   kubernetes_ca_cert="$SA_CA_CRT"
@@ -123,6 +124,7 @@ vault write auth/kubernetes/role/vault-secrets-operator \
 # If you're running Vault inside kubernetes, you can alternatively exec into any Vault pod and run this...
 # In some bare-metal k8s setups this method is necessary.
 # vault write auth/kubernetes/config \
+#   issuer="https://kubernetes.default.svc.cluster.local" \
 #   token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
 #   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
 #   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
