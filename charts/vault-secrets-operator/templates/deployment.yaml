@@ -75,6 +75,12 @@ spec:
               value: {{ .Values.vault.azureRole | quote }}
             - name: VAULT_AZURE_ISSCALESET
               value: {{ .Values.vault.azureScaleset | quote }}
+            - name: VAULT_GCP_PATH
+              value: {{ .Values.vault.gcpPath | quote }}
+            - name: VAULT_GCP_AUTH_TYPE
+              value: {{ .Values.vault.gcpAuthType | quote }}
+            - name: VAULT_GCP_ROLE
+              value: {{ .Values.vault.gcpRole | quote }}
 
             {{- with .Values.environmentVars }}
             {{- toYaml . | nindent 12 }}

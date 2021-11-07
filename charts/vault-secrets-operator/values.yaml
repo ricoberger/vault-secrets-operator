@@ -86,6 +86,9 @@ vault:
   appRolePath: auth/approle
   azurePath: auth/azure
   azureRole: default
+  gcpPath: auth/gcp
+  gcpAuthType: gce
+  gcpRole: vault-secrets-operator
   reconciliationTime: 0
   namespaces: ""
 
