@@ -362,129 +362,111 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			vaultGcpPath = "auth/gcp"
 		}
 
+		var gcpLoginDataFunc func() (map[string]interface{}, error)
+
 		switch vaultGcpAuthType {
 		case "gce":
-			// Read the service account token value and create a map for the
-			// authentication against Vault.
-			tokenSource, err := google.DefaultTokenSource(context.TODO(), iam.CloudPlatformScope)
-			if err != nil {
-				return nil, err
+			gcpLoginDataFunc = func() (map[string]interface{}, error) {
+				// Read the service account token value and create a map for the
+				// authentication against Vault.
+				tokenSource, err := google.DefaultTokenSource(context.TODO(), iam.CloudPlatformScope)
+				if err != nil {
+					return nil, err
+				}
+				jwt, err := tokenSource.Token()
+				if err != nil {
+					return nil, err
+				}
+
+				return map[string]interface{}{
+					"jwt":  jwt.AccessToken,
+					"role": vaultGcpRole,
+				}, nil
 			}
-			jwt, err := tokenSource.Token()
-			if err != nil {
-				return nil, err
-			}
-
-			data := make(map[string]interface{})
-			data["jwt"] = jwt.AccessToken
-			data["role"] = vaultGcpRole
-
-			// Authenticate against vault using the GCP Auth Method and set
-			// the token which the client should use for further interactions with
-			// Vault. We also set the lease duration of the token for the renew
-			// function.
-			secret, err := apiClient.Logical().Write(vaultGcpPath+"/login", data)
-			if err != nil {
-				return nil, err
-			} else if secret.Auth == nil {
-				return nil, fmt.Errorf("missing authentication information")
-			}
-
-			tokenLeaseDuration := secret.Auth.LeaseDuration
-
-			tokenRenewalInterval, err := strconv.ParseFloat(vaultTokenRenewalInterval, 64)
-			if err != nil {
-				tokenRenewalInterval = float64(tokenLeaseDuration) * 0.5
-			}
-
-			tokenRenewalRetryInterval, err := strconv.ParseFloat(vaultTokenRenewalRetryInterval, 64)
-			if err != nil {
-				tokenRenewalRetryInterval = 30.0
-			}
-
-			apiClient.SetToken(secret.Auth.ClientToken)
-
-			return &Client{
-				client:                    apiClient,
-				tokenLeaseDuration:        tokenLeaseDuration,
-				tokenRenewalInterval:      tokenRenewalInterval,
-				tokenRenewalRetryInterval: tokenRenewalRetryInterval,
-				rootVaultNamespace:        vaultNamespace,
-			}, nil
 		case "iam":
-			// Read the service account token value and create a map for the
-			// authentication against Vault.
-			c, err := credentials.NewIamCredentialsClient(context.TODO())
-			if err != nil {
-				return nil, err
+			gcpLoginDataFunc = func() (map[string]interface{}, error) {
+				// Read the service account token value and create a map for the
+				// authentication against Vault.
+				c, err := credentials.NewIamCredentialsClient(context.TODO())
+				if err != nil {
+					return nil, err
+				}
+
+				metadataClient := metadata.NewClient(nil)
+				serviceAccountEmail, err := metadataClient.Email("default")
+				if err != nil {
+					return nil, err
+				}
+
+				jwtPayload := map[string]interface{}{
+					"aud": fmt.Sprintf("vault/%s", vaultGcpRole),
+					"sub": serviceAccountEmail,
+					"exp": time.Now().Add(time.Minute * 10).Unix(),
+				}
+
+				payloadBytes, err := json.Marshal(jwtPayload)
+				if err != nil {
+					return nil, err
+				}
+
+				req := &credentialspb.SignJwtRequest{
+					Name:    fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail),
+					Payload: string(payloadBytes),
+				}
+				resp, err := c.SignJwt(context.TODO(), req)
+				if err != nil {
+					return nil, err
+				}
+
+				return map[string]interface{}{
+					"jwt":  resp.SignedJwt,
+					"role": vaultGcpRole,
+				}, nil
 			}
-
-			metadataClient := metadata.NewClient(nil)
-			serviceAccountEmail, err := metadataClient.Email("default")
-			if err != nil {
-				return nil, err
-			}
-
-			jwtPayload := map[string]interface{}{
-				"aud": fmt.Sprintf("vault/%s", vaultGcpRole),
-				"sub": serviceAccountEmail,
-				"exp": time.Now().Add(time.Minute * 10).Unix(),
-			}
-
-			payloadBytes, err := json.Marshal(jwtPayload)
-			if err != nil {
-				return nil, err
-			}
-
-			req := &credentialspb.SignJwtRequest{
-				Name:    fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail),
-				Payload: string(payloadBytes),
-			}
-			resp, err := c.SignJwt(context.TODO(), req)
-			if err != nil {
-				return nil, err
-			}
-
-			data := make(map[string]interface{})
-			data["jwt"] = string(resp.SignedJwt)
-			data["role"] = vaultGcpRole
-
-			// Authenticate against vault using the GCP Auth Method and set
-			// the token which the client should use for further interactions with
-			// Vault. We also set the lease duration of the token for the renew
-			// function.
-			secret, err := apiClient.Logical().Write(vaultGcpPath+"/login", data)
-			if err != nil {
-				return nil, err
-			} else if secret.Auth == nil {
-				return nil, fmt.Errorf("missing authentication information")
-			}
-
-			tokenLeaseDuration := secret.Auth.LeaseDuration
-
-			tokenRenewalInterval, err := strconv.ParseFloat(vaultTokenRenewalInterval, 64)
-			if err != nil {
-				tokenRenewalInterval = float64(tokenLeaseDuration) * 0.5
-			}
-
-			tokenRenewalRetryInterval, err := strconv.ParseFloat(vaultTokenRenewalRetryInterval, 64)
-			if err != nil {
-				tokenRenewalRetryInterval = 30.0
-			}
-
-			apiClient.SetToken(secret.Auth.ClientToken)
-
-			return &Client{
-				client:                    apiClient,
-				tokenLeaseDuration:        tokenLeaseDuration,
-				tokenRenewalInterval:      tokenRenewalInterval,
-				tokenRenewalRetryInterval: tokenRenewalRetryInterval,
-				rootVaultNamespace:        vaultNamespace,
-			}, nil
-
 		default:
-			return nil, fmt.Errorf("invalid gcp authentication type")
+			gcpLoginDataFunc = func() (map[string]interface{}, error) {
+				return nil, fmt.Errorf("invalid gcp authentication type")
+			}
 		}
+
+		// Create login data according to GCP Auth Type
+		data, err := gcpLoginDataFunc()
+		if err != nil {
+			return nil, err
+		}
+
+		// Authenticate against vault using the GCP Auth Method and set
+		// the token which the client should use for further interactions with
+		// Vault. We also set the lease duration of the token for the renew
+		// function.
+		secret, err := apiClient.Logical().Write(vaultGcpPath+"/login", data)
+		if err != nil {
+			return nil, err
+		} else if secret.Auth == nil {
+			return nil, fmt.Errorf("missing authentication information")
+		}
+
+		tokenLeaseDuration := secret.Auth.LeaseDuration
+
+		tokenRenewalInterval, err := strconv.ParseFloat(vaultTokenRenewalInterval, 64)
+		if err != nil {
+			tokenRenewalInterval = float64(tokenLeaseDuration) * 0.5
+		}
+
+		tokenRenewalRetryInterval, err := strconv.ParseFloat(vaultTokenRenewalRetryInterval, 64)
+		if err != nil {
+			tokenRenewalRetryInterval = 30.0
+		}
+
+		apiClient.SetToken(secret.Auth.ClientToken)
+
+		return &Client{
+			client:                    apiClient,
+			tokenLeaseDuration:        tokenLeaseDuration,
+			tokenRenewalInterval:      tokenRenewalInterval,
+			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
+			rootVaultNamespace:        vaultNamespace,
+		}, nil
 	}
 
 	return nil, fmt.Errorf("invalid authentication method")
