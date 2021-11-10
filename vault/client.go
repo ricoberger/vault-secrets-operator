@@ -24,7 +24,7 @@ type Client struct {
 	tokenLeaseDuration int
 	// renewToken is whether the operator should renew its own token
 	// to be used when a service external to the operator renews the token itself
-	// defaults to true 
+	// defaults to true
 	renewToken bool
 	// tokenRenewalInterval is the time between two successive vault token renewals.
 	tokenRenewalInterval float64
@@ -123,6 +123,25 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 		return nil, fmt.Errorf("vaultNamespace field can not be used, because the VAULT_NAMESPACE environment variable is not set")
 	}
 
+	// If a user specified "gcp" as secret engine in the VaultSecret, we just
+	// read the secret from Vault and return a secret with the following keys:
+	// "key_algorithm", "key_type" and "private_key_data".
+	// See: https://github.com/ricoberger/vault-secrets-operator/issues/123
+	if secretEngine == "gcp" {
+		reqData := make(map[string][]string)
+
+		secret, err := c.client.Logical().ReadWithData(path, reqData)
+		if err != nil {
+			return nil, err
+		}
+
+		if secret == nil {
+			return nil, fmt.Errorf("secret is nil")
+		}
+
+		return convertSecretData(secret.Data, keys, isBinary)
+	}
+
 	// Check if the KVv1 or KVv2 is used for the provided secret and determin
 	// the mount path of the secrets engine.
 	mountPath, v2, err := c.isKVv2(path)
@@ -166,13 +185,30 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 		}
 	}
 
-	// Convert the secret data for a Kubernetes secret. We only add the provided
-	// keys to the resulting data or if there are no keys provided we add all
-	// keys of the secret.
-	// To support nested secret values we check the type of the value first. If
-	// The type is 'map[string]interface{}' we marshal the value to a JSON
-	// string, which can be used for the Kubernetes secret.
+	return convertSecretData(secretData, keys, isBinary)
+}
+
+// contains checks if a given key is in a slice of keys.
+func contains(key string, keys []string) bool {
+	for _, k := range keys {
+		if k == key {
+			return true
+		}
+	}
+
+	return false
+}
+
+// convertSecretData converts the secret data for a Kubernetes secret. We only
+// add the provided keys to the resulting data or if there are no keys provided
+// we add all keys of the secret.
+// To support nested secret values we check the type of the value first. If
+// The type is 'map[string]interface{}' we marshal the value to a JSON
+// string, which can be used for the Kubernetes secret.
+func convertSecretData(secretData map[string]interface{}, keys []string, isBinary bool) (map[string][]byte, error) {
+	var err error
 	data := make(map[string][]byte)
+
 	for key, value := range secretData {
 		if value == nil {
 			continue
@@ -211,18 +247,8 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 	if len(data) == 0 {
 		return nil, fmt.Errorf("invalid secret data")
 	}
+
 	return data, nil
-}
-
-// contains checks if a given key is in a slice of keys.
-func contains(key string, keys []string) bool {
-	for _, k := range keys {
-		if k == key {
-			return true
-		}
-	}
-
-	return false
 }
 
 // kvPreflightVersionRequest checks which version of the key values secrets
