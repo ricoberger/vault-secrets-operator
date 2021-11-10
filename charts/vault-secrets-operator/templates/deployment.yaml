@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "vault-secrets-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
   {{- if .Values.podAnnotations }}

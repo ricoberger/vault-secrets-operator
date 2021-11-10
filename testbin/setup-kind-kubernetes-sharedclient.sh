@@ -18,9 +18,9 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
-  image: kindest/node:v1.20.7
+  image: kindest/node:v1.21.2
 - role: worker
-  image: kindest/node:v1.20.7
+  image: kindest/node:v1.21.2
 containerdConfigPatches:
 - |-
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${reg_port}"]
@@ -53,7 +53,7 @@ kubectl create ns vault-secrets-operator
 
 # Install Vault in the cluster and create a new secret engine for the operator
 helm repo add hashicorp https://helm.releases.hashicorp.com
-helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.10.0 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.7.0"
+helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.17.1 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.8.4"
 
 sleep 10s
 kubectl wait pod/vault-0 --namespace=vault  --for=condition=Ready --timeout=180s
@@ -78,7 +78,7 @@ export SA_CA_CRT=$(kubectl get secret --namespace=vault-secrets-operator $VAULT_
 export K8S_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 env | grep -E 'VAULT_SECRETS_OPERATOR_NAMESPACE|VAULT_SECRET_NAME|SA_JWT_TOKEN|SA_CA_CRT|K8S_HOST'
 vault auth enable kubernetes
-vault write auth/kubernetes/config token_reviewer_jwt="$SA_JWT_TOKEN" kubernetes_host="https://kubernetes.default.svc" kubernetes_ca_cert="$SA_CA_CRT"
+vault write auth/kubernetes/config token_reviewer_jwt="$SA_JWT_TOKEN" kubernetes_host="https://kubernetes.default.svc" kubernetes_ca_cert="$SA_CA_CRT" issuer="https://kubernetes.default.svc.cluster.local"
 vault write auth/kubernetes/role/vault-secrets-operator bound_service_account_names="vault-secrets-operator" bound_service_account_namespaces="$VAULT_SECRETS_OPERATOR_NAMESPACE" policies=vault-secrets-operator ttl=24h
 
 cat <<EOF | kubectl apply -f -

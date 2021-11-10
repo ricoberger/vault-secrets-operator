@@ -286,9 +286,7 @@ func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[
 // newSecretForCR returns a secret with the same name/namespace as the CR. The secret will include all labels and
 // annotations from the CR.
 func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte) (*corev1.Secret, error) {
-	labels := map[string]string{
-		"created-by": "vault-secrets-operator",
-	}
+	labels := map[string]string{}
 	for k, v := range cr.ObjectMeta.Labels {
 		labels[k] = v
 	}

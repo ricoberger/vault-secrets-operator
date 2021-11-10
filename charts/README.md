@@ -5,7 +5,7 @@
 | `replicaCount` | Number of replications which should be created. | `1` |
 | `deploymentStrategy` | Deployment strategy which should be used. | `{}` |
 | `image.repository` | The repository of the Docker image. | `ricoberger/vault-secrets-operator` |
-| `image.tag` | The tag of the Docker image which should be used. | `1.14.5` |
+| `image.tag` | The tag of the Docker image which should be used. | `1.15.2` |
 | `image.pullPolicy` | The pull policy for the Docker image, | `IfNotPresent` |
 | `image.volumeMounts` | Mount additional volumns to the container. | `[]` |
 | `imagePullSecrets` | Secrets which can be used to pull the Docker image. | `[]` |
@@ -25,6 +25,7 @@
 | `rbac.namespaced` | Deploy in isolated namespace. Creates RoleBinding instead of a ClusterRoleBinding | `false` |
 | `serviceAccount.create` | Create the service account. | `true` |
 | `serviceAccount.name` | The name of the service account, which should be created/used by the operator. | `vault-secrets-operator` |
+| `serviceAccount.annotations` | Annotations to be added to service account. | `{}` |
 | `podAnnotations` | Annotations for vault-secrets-operator pod(s). | `{}` |
 | `podSecurityContext`: | Security context policies to add to the operator pod. | `{}` |
 | `securityContext`: | Security context policies to add to the containers. | `{}` |
