@@ -172,6 +172,18 @@ vault:
   authMethod: approle
 ```
 
+### AWS Auth Method
+
+You can use either ec2 or iam auth types on eks clusters to authenticate against the Vault API. [here](https://www.vaultproject.io/docs/auth/aws)
+Then you can enable the auth method with the following environment variables:
+```shell
+export VAULT_AUTH_METHOD=aws
+export VAULT_AWS_PATH=auth/aws
+export VAULT_AWS_ROLE=vault-secrets-operator
+```
+
+If you deploy the Vault Secrets Operator via Helm you have to set the `vault.authMethod`, `vault.azurepath`, `vault.azureRole`, `vault.azureScaleset` values in the `values.yaml` file.
+
 ### Azure Auth Method
 
 You can use the managed system identity provided on aks cluster to authenticate against the Vault API, to do that you will need to setup an auth backend as described [here](https://www.vaultproject.io/docs/auth/azure)
@@ -184,6 +196,16 @@ export VAULT_AZURE_ISSCALESET=true # Set this to true if the kubernetes nodes ar
 ```
 
 If you deploy the Vault Secrets Operator via Helm you have to set the `vault.authMethod`, `vault.azurepath`, `vault.azureRole`, `vault.azureScaleset` values in the `values.yaml` file.
+
+### GCP Auth Method
+
+You can use either gce or iam auth types on gke clusters to authenticate against the Vault API. [here](https://www.vaultproject.io/docs/auth/gcp)
+Then you can enable the auth method with the following environment variables:
+```shell
+export VAULT_AUTH_METHOD=gcp
+export VAULT_GCP_PATH=auth/gcp
+export VAULT_GCP_ROLE=vault-secrets-operator
+```
 
 ## Usage
 
