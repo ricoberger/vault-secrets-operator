@@ -516,6 +516,15 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalRetryInterval = 30.0
 		}
 
+		// Tokens have to be reissued after a short period
+		tokenMaxTTL, err := strconv.Atoi(vaultTokenMaxTTL)
+		if err != nil {
+			// Vault default max TTL is 32 days, use 16 days as the reasonable default if
+			// VAULT_TOKEN_MAX_TTL not set.
+			// https://learn.hashicorp.com/tutorials/vault/tokens
+			tokenMaxTTL = 16 * 24 * 60 * 60
+		}
+
 		apiClient.SetToken(secret.Auth.ClientToken)
 
 		return &Client{
@@ -524,6 +533,25 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			tokenMaxTTL:               tokenMaxTTL,
+			requestToken: func(c *Client) error {
+				data, err := awsLoginDataFunc()
+				if err != nil {
+					return err
+				}
+				secret, err := apiClient.Logical().Write(vaultAwsPath+"/login", data)
+				if err != nil {
+					return err
+				}
+				c.client.SetToken(secret.Auth.ClientToken)
+				// Update token lease duration and renewal interval
+				c.tokenLeaseDuration = secret.Auth.LeaseDuration
+				c.tokenRenewalInterval, err = strconv.ParseFloat(vaultTokenRenewalInterval, 64)
+				if err != nil {
+					c.tokenRenewalInterval = float64(c.tokenLeaseDuration) * 0.5
+				}
+				return nil
+			},
 		}, nil
 	}
 
@@ -562,33 +590,35 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				// authentication against Vault.
 				c, err := gcpcredentials.NewIamCredentialsClient(context.TODO())
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("could not create IAM client: %w", err)
 				}
 
 				metadataClient := gcpmetadata.NewClient(nil)
 				serviceAccountEmail, err := metadataClient.Email("default")
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("could not obtain service account from credentials; a service account to authenticate as must be provided")
 				}
 
+				ttl := time.Minute * time.Duration(15)
 				jwtPayload := map[string]interface{}{
 					"aud": fmt.Sprintf("vault/%s", vaultGcpRole),
 					"sub": serviceAccountEmail,
-					"exp": time.Now().Add(time.Minute * 10).Unix(),
+					"exp": time.Now().Add(ttl).Unix(),
 				}
 
 				payloadBytes, err := json.Marshal(jwtPayload)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("could not convert JWT payload to JSON string: %w", err)
 				}
 
+				resourceName := fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail)
 				req := &gcpcredentialspb.SignJwtRequest{
-					Name:    fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail),
+					Name:    resourceName,
 					Payload: string(payloadBytes),
 				}
 				resp, err := c.SignJwt(context.TODO(), req)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("unable to sign JWT for %s using given Vault credentials: %w", resourceName, err)
 				}
 
 				return map[string]interface{}{
@@ -639,6 +669,24 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			requestToken: func(c *Client) error {
+				data, err := gcpLoginDataFunc()
+				if err != nil {
+					return err
+				}
+				secret, err := apiClient.Logical().Write(vaultGcpPath+"/login", data)
+				if err != nil {
+					return err
+				}
+				c.client.SetToken(secret.Auth.ClientToken)
+				// Update token lease duration and renewal interval
+				c.tokenLeaseDuration = secret.Auth.LeaseDuration
+				c.tokenRenewalInterval, err = strconv.ParseFloat(vaultTokenRenewalInterval, 64)
+				if err != nil {
+					c.tokenRenewalInterval = float64(c.tokenLeaseDuration) * 0.5
+				}
+				return nil
+			},
 		}, nil
 	}
 
