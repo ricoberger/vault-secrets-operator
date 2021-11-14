@@ -183,7 +183,7 @@ export VAULT_AWS_ROLE=vault-secrets-operator
 export VAULT_AWS_AUTH_TYPE=iam
 ```
 
-If you deploy the Vault Secrets Operator via Helm you have to set the `vault.authMethod`, `vault.azurepath`, `vault.azureRole`, `vault.azureScaleset` values in the `values.yaml` file.
+If you deploy the Vault Secrets Operator via Helm you have to set the `vault.authMethod`, `vault.awsPath`, `vault.awsRole` and `vault.awsAuthType` values in the `values.yaml` file.
 
 ### Azure Auth Method
 
@@ -208,6 +208,8 @@ export VAULT_GCP_PATH=auth/gcp
 export VAULT_GCP_ROLE=vault-secrets-operator
 export VAULT_GCP_AUTH_TYPE=iam
 ```
+
+If you deploy the Vault Secrets Operator via Helm you have to set the `vault.authMethod`, `vault.gcpPath`, `vault.gcpRole` and `vault.gcpAuthType` values in the `values.yaml` file.
 
 ## Usage
 
