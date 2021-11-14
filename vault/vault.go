@@ -1,21 +1,33 @@
 package vault
 
 import (
-	"cloud.google.com/go/compute/metadata"
-	credentials "cloud.google.com/go/iam/credentials/apiv1"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/leosayous21/go-azure-msi/msi"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/iam/v1"
-	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"io/ioutil"
 	"os"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
 	"time"
+
+	gcpmetadata "cloud.google.com/go/compute/metadata"
+	gcpcredentials "cloud.google.com/go/iam/credentials/apiv1"
+	awscredentials "github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	awsdefaults "github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/hashicorp/vault/api"
+	"github.com/leosayous21/go-azure-msi/msi"
+	"github.com/pkg/errors"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iam/v1"
+	gcpcredentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
@@ -72,6 +84,9 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultAzurePath := os.Getenv("VAULT_AZURE_PATH")
 	vaultAzureRole := os.Getenv("VAULT_AZURE_ROLE")
 	vaultAzureIsScaleset := os.Getenv("VAULT_AZURE_ISSCALESET")
+	vaultAwsPath := os.Getenv("VAULT_AWS_PATH")
+	vaultAwsAuthType := os.Getenv("VAULT_AWS_AUTH_TYPE")
+	vaultAwsRole := os.Getenv("VAULT_AWS_ROLE")
 	vaultGcpPath := os.Getenv("VAULT_GCP_PATH")
 	vaultGcpAuthType := os.Getenv("VAULT_GCP_AUTH_TYPE")
 	vaultGcpRole := os.Getenv("VAULT_GCP_ROLE")
@@ -354,6 +369,162 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 	}
 
+	if vaultAuthMethod == "aws" {
+		// Check the required mount path and role for the AWS Auth
+		// Method. If one of the env variable is missing we return an error.
+		if vaultAwsPath == "" {
+			vaultAwsPath = "auth/aws"
+		}
+
+		var awsLoginDataFunc func() (map[string]interface{}, error)
+
+		switch vaultAwsAuthType {
+		case "ec2":
+			awsLoginDataFunc = func() (map[string]interface{}, error) {
+				sess, err := awssession.NewSession()
+				if err != nil {
+					return nil, errors.Wrap(err, "error creating a new session to create ec2metadata")
+				}
+				metadataSvc := ec2metadata.New(sess)
+				doc, err := metadataSvc.GetDynamicData("/instance-identity/document")
+				if err != nil {
+					return nil, fmt.Errorf("error requesting doc: %w", err)
+				}
+
+				signature, err := metadataSvc.GetDynamicData("/instance-identity/signature")
+				if err != nil {
+					return nil, fmt.Errorf("error requesting signature: %w", err)
+				}
+
+				kubeToken, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+				if err != nil {
+					return nil, err
+				}
+				if err != nil {
+					return nil, err
+				}
+
+				nonce := fmt.Sprintf("%x", sha256.Sum256(kubeToken))
+
+				return map[string]interface{}{
+					"identity":  base64.StdEncoding.EncodeToString([]byte(doc)),
+					"signature": signature,
+					"nonce":     nonce,
+					"role":      vaultAwsRole,
+				}, nil
+			}
+		case "iam":
+			awsLoginDataFunc = func() (map[string]interface{}, error) {
+				var providers []awscredentials.Provider
+
+				// Load in AWS env variables if exist.
+				roleARN := os.Getenv("AWS_ROLE_ARN")
+				tokenPath := os.Getenv("AWS_WEB_IDENTITY_TOKEN_FILE")
+				roleSessionName := os.Getenv("AWS_ROLE_SESSION_NAME")
+
+				if roleARN != "" && tokenPath != "" {
+					sess, err := awssession.NewSession()
+					if err != nil {
+						return nil, errors.Wrap(err, "error creating a new session to create a WebIdentityRoleProvider")
+					}
+					webIdentityProvider := stscreds.NewWebIdentityRoleProvider(sts.New(sess), roleARN, roleSessionName, tokenPath)
+
+					// Add the web identity role credential provider
+					providers = append(providers, webIdentityProvider)
+				}
+
+				// Add the environment credential provider
+				providers = append(providers, &awscredentials.EnvProvider{})
+
+				// Add the remote provider
+				def := awsdefaults.Get()
+				providers = append(providers, awsdefaults.RemoteCredProvider(*def.Config, def.Handlers))
+
+				// Create the credentials required to access the API.
+				creds := awscredentials.NewChainCredentials(providers)
+				if creds == nil {
+					return nil, fmt.Errorf("could not compile valid credential providers from environment, web identity or instance metadata")
+				}
+
+				stsSession, err := awssession.NewSessionWithOptions(awssession.Options{
+					Config: aws.Config{
+						Credentials:      creds,
+						EndpointResolver: endpoints.ResolverFunc(stsSigningResolver),
+					},
+				})
+				if err != nil {
+					return nil, err
+				}
+
+				var params *sts.GetCallerIdentityInput
+				svc := sts.New(stsSession)
+				stsRequest, _ := svc.GetCallerIdentityRequest(params)
+
+				// Sign the request
+				stsRequest.Sign()
+
+				// Now extract out the relevant parts of the request
+				headersJson, err := json.Marshal(stsRequest.HTTPRequest.Header)
+				if err != nil {
+					return nil, err
+				}
+				requestBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]interface{}{
+					"iam_http_request_method": stsRequest.HTTPRequest.Method,
+					"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String())),
+					"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJson),
+					"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
+				}, nil
+			}
+		default:
+			awsLoginDataFunc = func() (map[string]interface{}, error) {
+				return nil, fmt.Errorf("invalid aws authentication type")
+			}
+		}
+
+		// Create login data according to AWS Auth Type
+		data, err := awsLoginDataFunc()
+		if err != nil {
+			return nil, err
+		}
+
+		// Authenticate against vault using the GCP Auth Method and set
+		// the token which the client should use for further interactions with
+		// Vault. We also set the lease duration of the token for the renew
+		// function.
+		secret, err := apiClient.Logical().Write(vaultGcpPath+"/login", data)
+		if err != nil {
+			return nil, err
+		} else if secret.Auth == nil {
+			return nil, fmt.Errorf("missing authentication information")
+		}
+
+		tokenLeaseDuration := secret.Auth.LeaseDuration
+
+		tokenRenewalInterval, err := strconv.ParseFloat(vaultTokenRenewalInterval, 64)
+		if err != nil {
+			tokenRenewalInterval = float64(tokenLeaseDuration) * 0.5
+		}
+
+		tokenRenewalRetryInterval, err := strconv.ParseFloat(vaultTokenRenewalRetryInterval, 64)
+		if err != nil {
+			tokenRenewalRetryInterval = 30.0
+		}
+
+		apiClient.SetToken(secret.Auth.ClientToken)
+
+		return &Client{
+			client:                    apiClient,
+			tokenLeaseDuration:        tokenLeaseDuration,
+			tokenRenewalInterval:      tokenRenewalInterval,
+			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
+			rootVaultNamespace:        vaultNamespace,
+		}, nil
+	}
+
 	if vaultAuthMethod == "gcp" {
 
 		// Check the required mount path and role for the GCP Auth
@@ -387,12 +558,12 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			gcpLoginDataFunc = func() (map[string]interface{}, error) {
 				// Read the service account token value and create a map for the
 				// authentication against Vault.
-				c, err := credentials.NewIamCredentialsClient(context.TODO())
+				c, err := gcpcredentials.NewIamCredentialsClient(context.TODO())
 				if err != nil {
 					return nil, err
 				}
 
-				metadataClient := metadata.NewClient(nil)
+				metadataClient := gcpmetadata.NewClient(nil)
 				serviceAccountEmail, err := metadataClient.Email("default")
 				if err != nil {
 					return nil, err
@@ -409,7 +580,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 					return nil, err
 				}
 
-				req := &credentialspb.SignJwtRequest{
+				req := &gcpcredentialspb.SignJwtRequest{
 					Name:    fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail),
 					Payload: string(payloadBytes),
 				}
@@ -470,4 +641,13 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	}
 
 	return nil, fmt.Errorf("invalid authentication method")
+}
+
+func stsSigningResolver(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+	defaultEndpoint, err := endpoints.DefaultResolver().EndpointFor(service, region, optFns...)
+	if err != nil {
+		return defaultEndpoint, err
+	}
+	defaultEndpoint.SigningRegion = region
+	return defaultEndpoint, nil
 }
