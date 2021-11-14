@@ -75,6 +75,12 @@ spec:
               value: {{ .Values.vault.azureRole | quote }}
             - name: VAULT_AZURE_ISSCALESET
               value: {{ .Values.vault.azureScaleset | quote }}
+            - name: VAULT_AWS_PATH
+              value: {{ .Values.vault.awsPath | quote }}
+            - name: VAULT_AWS_AUTH_TYPE
+              value: {{ .Values.vault.awsAuthType | quote }}
+            - name: VAULT_AWS_ROLE
+              value: {{ .Values.vault.awsRole | quote }}
             - name: VAULT_GCP_PATH
               value: {{ .Values.vault.gcpPath | quote }}
             - name: VAULT_GCP_AUTH_TYPE

@@ -17,8 +17,11 @@
 | `vault.tokenPath` | Path to file with the Vault token if the used auth method is `token`. Can be used to read the token from a file and not from the  `VAULT_TOKEN` environment variable. | `""` |
 | `vault.kubernetesPath` | If the Kubernetes auth method is used, this is the path where the Kubernetes auth method is enabled. | `auth/kubernetes` |
 | `vault.kubernetesRole` | The name of the role which is configured for the Kubernetes auth method. | `vault-secrets-operator` |
+| `vault.awsPath` | If the AWS auth method is used, this is the path where the GCP auth method is enabled. | `auth/aws` |
+| `vault.awsAuthType` | If the AWS auth method is used, this is the auth type GCP auth method should use. `ec2` or `iam` | `iam` |
+| `vault.awsRole` | The name of the role which is configured for the AWS auth method. | `vault-secrets-operator` |
 | `vault.gcpPath` | If the GCP auth method is used, this is the path where the GCP auth method is enabled. | `auth/gcp` |
-| `vault.gcpAuthType` | If the GCP auth method is used, this is the auth type GCP auth method should use. `gce` or `iam` | `gce` |
+| `vault.gcpAuthType` | If the GCP auth method is used, this is the auth type GCP auth method should use. `gce` or `iam` | `iam` |
 | `vault.gcpRole` | The name of the role which is configured for the GCP auth method. | `vault-secrets-operator` |
 | `vault.appRolePath` | If the AppRole auth method is used, this is the path where the AppRole auth method is enabled. | `auth/approle` |
 | `vault.reconciliationTime` | The time after which the reconcile function for the CR is rerun. If the value is 0, automatic reconciliation is skipped. | `0` |
