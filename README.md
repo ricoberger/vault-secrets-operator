@@ -180,6 +180,7 @@ Then you can enable the auth method with the following environment variables:
 export VAULT_AUTH_METHOD=aws
 export VAULT_AWS_PATH=auth/aws
 export VAULT_AWS_ROLE=vault-secrets-operator
+export VAULT_AWS_AUTH_TYPE=iam
 ```
 
 If you deploy the Vault Secrets Operator via Helm you have to set the `vault.authMethod`, `vault.azurepath`, `vault.azureRole`, `vault.azureScaleset` values in the `values.yaml` file.
@@ -205,6 +206,7 @@ Then you can enable the auth method with the following environment variables:
 export VAULT_AUTH_METHOD=gcp
 export VAULT_GCP_PATH=auth/gcp
 export VAULT_GCP_ROLE=vault-secrets-operator
+export VAULT_GCP_AUTH_TYPE=iam
 ```
 
 ## Usage
