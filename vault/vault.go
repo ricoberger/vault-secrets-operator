@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -15,10 +13,12 @@ import (
 
 	gcpmetadata "cloud.google.com/go/compute/metadata"
 	gcpcredentials "cloud.google.com/go/iam/credentials/apiv1"
+	"github.com/aws/aws-sdk-go/aws"
 	awscredentials "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	awsdefaults "github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/vault/api"
@@ -449,6 +449,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				stsSession, err := awssession.NewSessionWithOptions(awssession.Options{
 					Config: aws.Config{
 						Credentials:      creds,
+						Region:           aws.String("us-east-1"),
 						EndpointResolver: endpoints.ResolverFunc(stsSigningResolver),
 					},
 				})
@@ -477,6 +478,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 					"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String())),
 					"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJson),
 					"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
+					"role":                    vaultAwsRole,
 				}, nil
 			}
 		default:
@@ -491,11 +493,11 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			return nil, err
 		}
 
-		// Authenticate against vault using the GCP Auth Method and set
+		// Authenticate against vault using the AWS Auth Method and set
 		// the token which the client should use for further interactions with
 		// Vault. We also set the lease duration of the token for the renew
 		// function.
-		secret, err := apiClient.Logical().Write(vaultGcpPath+"/login", data)
+		secret, err := apiClient.Logical().Write(vaultAwsPath+"/login", data)
 		if err != nil {
 			return nil, err
 		} else if secret.Auth == nil {
