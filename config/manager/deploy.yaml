@@ -21,7 +21,7 @@ spec:
         - /manager
         args:
         - -leader-elect
-        image: ricoberger/vault-secrets-operator:1.15.2
+        image: ricoberger/vault-secrets-operator:1.16.0
         name: manager
         env:
         - name: WATCH_NAMESPACE
