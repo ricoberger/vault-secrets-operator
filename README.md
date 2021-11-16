@@ -100,6 +100,10 @@ export K8S_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluste
 
 # Verify the environment variables
 env | grep -E 'VAULT_SECRETS_OPERATOR_NAMESPACE|VAULT_SECRET_NAME|SA_JWT_TOKEN|SA_CA_CRT|K8S_HOST'
+
+# To discover the service account issuer the following commands can be used:
+kubectl proxy
+curl --silent http://127.0.0.1:8001/api/v1/namespaces/default/serviceaccounts/default/token -H "Content-Type: application/json" -X POST -d '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' | jq -r '.status.token' | cut -d . -f2 | base64 -D
 ```
 
 Enable the Kubernetes auth method at the default path (`auth/kubernetes`) and finish the configuration of Vault:
