@@ -24,7 +24,7 @@ type Client struct {
 	tokenLeaseDuration int
 	// renewToken is whether the operator should renew its own token
 	// to be used when a service external to the operator renews the token itself
-	// defaults to true 
+	// defaults to true
 	renewToken bool
 	// tokenRenewalInterval is the time between two successive vault token renewals.
 	tokenRenewalInterval float64

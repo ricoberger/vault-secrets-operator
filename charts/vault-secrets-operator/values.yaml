@@ -86,6 +86,12 @@ vault:
   appRolePath: auth/approle
   azurePath: auth/azure
   azureRole: default
+  awsPath: auth/aws
+  awsAuthType: iam
+  awsRole: vault-secrets-operator
+  gcpPath: auth/gcp
+  gcpAuthType: iam
+  gcpRole: vault-secrets-operator
   reconciliationTime: 0
   namespaces: ""
 
