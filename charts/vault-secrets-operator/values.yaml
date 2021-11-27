@@ -13,6 +13,9 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+args:
+  - -leader-elect
+
 environmentVars: []
   # Set environment variables from a secret. This must be done, if you use the
   # Token or AppRole Auth Methods of Vault.
