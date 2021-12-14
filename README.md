@@ -522,6 +522,37 @@ spec:
 
 The Vault Namespace, which is used to get the secret in the above example will be `my/root/ns/team1`.
 
+### Propagating labels
+
+The operator will propagate all labels found on the `VaultSecret` to the actual secret. So if a given label is needed on the resulting secret it can be added like in the following example:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: example-vaultsecret
+  labels:
+    my-custom-label: my-custom-label-value
+spec:
+  path: path/to/example-vaultsecret
+  type: Opaque
+```
+
+This would result in the following secret:
+
+```yaml
+apiVersion: v1
+data:
+  ...
+kind: Secret
+metadata:
+  labels:
+    created-by: vault-secrets-operator
+    my-custom-label: my-custom-label-value
+  name: example-vaultsecret
+type: Opaque
+```
+
 ## Development
 
 After modifying the `*_types.go` file always run the following command to update the generated code for that resource type:
