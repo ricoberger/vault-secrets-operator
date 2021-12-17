@@ -106,6 +106,11 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 		return nil, err
 	}
 
+	renewToken, err := strconv.ParseBool(vaultRenewToken)
+	if err == nil {
+		renewToken = true
+	}
+
 	// Check which authentication method should be used.
 	if vaultAuthMethod == "token" {
 		// Check the required token and the provided lease duration for the
@@ -135,11 +140,6 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 		tokenLeaseDuration, err := strconv.Atoi(vaultTokenLeaseDuration)
 		if err != nil {
 			return nil, err
-		}
-
-		renewToken, err := strconv.ParseBool(vaultRenewToken)
-		if err == nil {
-			renewToken = true
 		}
 
 		tokenRenewalInterval, err := strconv.ParseFloat(vaultTokenRenewalInterval, 64)
@@ -217,6 +217,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		return &Client{
 			client:                    apiClient,
+			renewToken:                renewToken,
 			tokenLeaseDuration:        tokenLeaseDuration,
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
@@ -276,6 +277,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		return &Client{
 			client:                    apiClient,
+			renewToken:                renewToken,
 			tokenLeaseDuration:        tokenLeaseDuration,
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
@@ -361,6 +363,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		return &Client{
 			client:                    apiClient,
+			renewToken:                renewToken,
 			tokenLeaseDuration:        tokenLeaseDuration,
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
@@ -529,6 +532,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		return &Client{
 			client:                    apiClient,
+			renewToken:                renewToken,
 			tokenLeaseDuration:        tokenLeaseDuration,
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
@@ -665,6 +669,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		return &Client{
 			client:                    apiClient,
+			renewToken:                renewToken,
 			tokenLeaseDuration:        tokenLeaseDuration,
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
