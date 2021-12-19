@@ -107,7 +107,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	}
 
 	renewToken, err := strconv.ParseBool(vaultRenewToken)
-	if err == nil {
+	if err != nil {
 		renewToken = true
 	}
 
