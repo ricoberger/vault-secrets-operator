@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: "{{ include "vault-secrets-operator.fullname" . }}-test-connection"
+  namespace: {{ .Release.Namespace }}
   labels:
 {{ include "vault-secrets-operator.labels" . | indent 4 }}
 {{ include "vault-secrets-operator.testPodLabels" . | indent 4 }}
