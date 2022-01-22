@@ -82,6 +82,7 @@ environmentVars: []
 # true, then the namespace of the release will be used.
 vault:
   address: ""
+  header: ""
   authMethod: token
   tokenPath: ""
   kubernetesPath: auth/kubernetes

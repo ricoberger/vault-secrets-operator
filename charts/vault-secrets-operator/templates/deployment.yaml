@@ -59,6 +59,10 @@ spec:
             - name: VAULT_ADDRESS
               value: {{ .Values.vault.address | quote }}
             {{- end }}
+            {{- if .Values.vault.header }}
+            - name: VAULT_HEADER
+              value: {{ .Values.vault.header | quote }}
+            {{- end }}
             - name: VAULT_AUTH_METHOD
               value: {{ .Values.vault.authMethod | quote }}
             - name: VAULT_TOKEN_PATH

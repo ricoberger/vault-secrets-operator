@@ -72,6 +72,7 @@ func InitSharedClient() error {
 // CreateClient is used by the InitSharedClient and directly for a reconciliation loop to create a new Vault client.
 func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultAddress := os.Getenv("VAULT_ADDRESS")
+	vaultHeader := os.Getenv("VAULT_HEADER")
 	vaultAuthMethod := os.Getenv("VAULT_AUTH_METHOD")
 	vaultToken := os.Getenv("VAULT_TOKEN")
 	vaultTokenPath := os.Getenv("VAULT_TOKEN_PATH")
@@ -464,6 +465,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				var params *sts.GetCallerIdentityInput
 				svc := sts.New(stsSession)
 				stsRequest, _ := svc.GetCallerIdentityRequest(params)
+				stsRequest.HTTPRequest.Header.Add("X-Vault-AWS-IAM-Server-ID", vaultHeader)
 
 				// Sign the request
 				stsRequest.Sign()
