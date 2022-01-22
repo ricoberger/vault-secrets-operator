@@ -84,6 +84,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultAzurePath := os.Getenv("VAULT_AZURE_PATH")
 	vaultAzureRole := os.Getenv("VAULT_AZURE_ROLE")
 	vaultAzureIsScaleset := os.Getenv("VAULT_AZURE_ISSCALESET")
+	vaultAwsRegion := os.Getenv("VAULT_AWS_REGION")
 	vaultAwsPath := os.Getenv("VAULT_AWS_PATH")
 	vaultAwsAuthType := os.Getenv("VAULT_AWS_AUTH_TYPE")
 	vaultAwsRole := os.Getenv("VAULT_AWS_ROLE")
@@ -452,7 +453,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				stsSession, err := awssession.NewSessionWithOptions(awssession.Options{
 					Config: aws.Config{
 						Credentials:      creds,
-						Region:           aws.String("us-east-1"),
+						Region:           aws.String(vaultAwsRegion),
 						EndpointResolver: endpoints.ResolverFunc(stsSigningResolver),
 					},
 				})

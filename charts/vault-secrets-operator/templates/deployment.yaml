@@ -77,6 +77,8 @@ spec:
               value: {{ .Values.vault.azureRole | quote }}
             - name: VAULT_AZURE_ISSCALESET
               value: {{ .Values.vault.azureScaleset | quote }}
+            - name: VAULT_AWS_REGION
+              value: {{ .Values.vault.awsRegion | quote }}
             - name: VAULT_AWS_PATH
               value: {{ .Values.vault.awsPath | quote }}
             - name: VAULT_AWS_AUTH_TYPE
