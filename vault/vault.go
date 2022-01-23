@@ -72,6 +72,7 @@ func InitSharedClient() error {
 // CreateClient is used by the InitSharedClient and directly for a reconciliation loop to create a new Vault client.
 func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultAddress := os.Getenv("VAULT_ADDRESS")
+	vaultHeader := os.Getenv("VAULT_HEADER")
 	vaultAuthMethod := os.Getenv("VAULT_AUTH_METHOD")
 	vaultToken := os.Getenv("VAULT_TOKEN")
 	vaultTokenPath := os.Getenv("VAULT_TOKEN_PATH")
@@ -84,6 +85,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultAzurePath := os.Getenv("VAULT_AZURE_PATH")
 	vaultAzureRole := os.Getenv("VAULT_AZURE_ROLE")
 	vaultAzureIsScaleset := os.Getenv("VAULT_AZURE_ISSCALESET")
+	vaultAwsRegion := os.Getenv("VAULT_AWS_REGION")
 	vaultAwsPath := os.Getenv("VAULT_AWS_PATH")
 	vaultAwsAuthType := os.Getenv("VAULT_AWS_AUTH_TYPE")
 	vaultAwsRole := os.Getenv("VAULT_AWS_ROLE")
@@ -452,7 +454,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				stsSession, err := awssession.NewSessionWithOptions(awssession.Options{
 					Config: aws.Config{
 						Credentials:      creds,
-						Region:           aws.String("us-east-1"),
+						Region:           aws.String(vaultAwsRegion),
 						EndpointResolver: endpoints.ResolverFunc(stsSigningResolver),
 					},
 				})
@@ -463,6 +465,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				var params *sts.GetCallerIdentityInput
 				svc := sts.New(stsSession)
 				stsRequest, _ := svc.GetCallerIdentityRequest(params)
+				stsRequest.HTTPRequest.Header.Add("X-Vault-AWS-IAM-Server-ID", vaultHeader)
 
 				// Sign the request
 				stsRequest.Sign()

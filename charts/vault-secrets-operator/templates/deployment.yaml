@@ -59,6 +59,10 @@ spec:
             - name: VAULT_ADDRESS
               value: {{ .Values.vault.address | quote }}
             {{- end }}
+            {{- if .Values.vault.header }}
+            - name: VAULT_HEADER
+              value: {{ .Values.vault.header | quote }}
+            {{- end }}
             - name: VAULT_AUTH_METHOD
               value: {{ .Values.vault.authMethod | quote }}
             - name: VAULT_TOKEN_PATH
@@ -77,6 +81,8 @@ spec:
               value: {{ .Values.vault.azureRole | quote }}
             - name: VAULT_AZURE_ISSCALESET
               value: {{ .Values.vault.azureScaleset | quote }}
+            - name: VAULT_AWS_REGION
+              value: {{ .Values.vault.awsRegion | quote }}
             - name: VAULT_AWS_PATH
               value: {{ .Values.vault.awsPath | quote }}
             - name: VAULT_AWS_AUTH_TYPE

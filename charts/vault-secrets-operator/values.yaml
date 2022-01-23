@@ -82,6 +82,7 @@ environmentVars: []
 # true, then the namespace of the release will be used.
 vault:
   address: ""
+  header: ""
   authMethod: token
   tokenPath: ""
   kubernetesPath: auth/kubernetes
@@ -89,6 +90,7 @@ vault:
   appRolePath: auth/approle
   azurePath: auth/azure
   azureRole: default
+  awsRegion: us-east-1
   awsPath: auth/aws
   awsAuthType: iam
   awsRole: vault-secrets-operator
