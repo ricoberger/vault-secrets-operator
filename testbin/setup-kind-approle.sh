@@ -94,17 +94,31 @@ vault:
 image:
   repository: localhost:5000/vault-secrets-operator
   tag: test
+  volumeMounts:
+    - name: vault-role-id
+      mountPath: "/etc/vault/role/"
+      readOnly: true
+    - name: vault-secret-id
+      mountPath: "/etc/vault/secret/"
+      readOnly: true
 environmentVars:
-  - name: VAULT_ROLE_ID
-    valueFrom:
-      secretKeyRef:
-        name: vault-secrets-operator
-        key: VAULT_ROLE_ID
-  - name: VAULT_SECRET_ID
-    valueFrom:
-      secretKeyRef:
-        name: vault-secrets-operator
-        key: VAULT_SECRET_ID
+  - name: VAULT_ROLE_ID_PATH
+    value: "/etc/vault/role/id"
+  - name: VAULT_SECRET_ID_PATH
+    value: "/etc/vault/secret/id"
+volumes:
+  - name: vault-role-id
+    secret:
+      secretName: vault-secrets-operator
+      items:
+        - key: VAULT_ROLE_ID
+          path: "id"
+  - name: vault-secret-id
+    secret:
+      secretName: vault-secrets-operator
+      items:
+        - key: VAULT_SECRET_ID
+          path: "id"
 EOF
 
 helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator -f ./values.yaml

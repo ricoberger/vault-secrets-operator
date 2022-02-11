@@ -92,8 +92,8 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultGcpPath := os.Getenv("VAULT_GCP_PATH")
 	vaultGcpAuthType := os.Getenv("VAULT_GCP_AUTH_TYPE")
 	vaultGcpRole := os.Getenv("VAULT_GCP_ROLE")
-	vaultRoleID := os.Getenv("VAULT_ROLE_ID")
-	vaultSecretID := os.Getenv("VAULT_SECRET_ID")
+	vaultRoleID := setVaultIDs("role")
+	vaultSecretID := setVaultIDs("secret")
 	vaultTokenMaxTTL := os.Getenv("VAULT_TOKEN_MAX_TTL")
 	vaultNamespace := os.Getenv("VAULT_NAMESPACE")
 
@@ -708,4 +708,20 @@ func stsSigningResolver(service, region string, optFns ...func(*endpoints.Option
 	}
 	defaultEndpoint.SigningRegion = region
 	return defaultEndpoint, nil
+}
+
+func setVaultIDs(idType string) string {
+	var idPath string
+	if idType == "role" {
+		idPath = os.Getenv("VAULT_ROLE_ID_PATH")
+	}
+	if idType == "secret" {
+		idPath = os.Getenv("VAULT_SECRET_ID_PATH")
+	}
+	id, err := ioutil.ReadFile(idPath)
+	if err != nil {
+		log.WithValues("VaultFilePath", idPath).Error(err, "missing secret vault-secrets-operator or bad path in volume")
+		return string(id)
+	}
+	return string(id)
 }
