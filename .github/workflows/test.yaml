@@ -12,7 +12,8 @@ jobs:
           - kubernetes-sharedclient
           - kubernetes-nosharedclient
           - kubernetes-namespaced
-          - approle
+          - approle-env-vars
+          - approle-no-env-vars
     defaults:
       run:
         shell: bash
@@ -27,6 +28,9 @@ jobs:
           curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
           sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
           sudo apt-get update && sudo apt-get install vault
+
+      - name: Setup kind cluster
+        run: ./testbin/setup-kind.sh
 
       - name: Run Test
         run: ./testbin/setup-kind-${{ matrix.test }}.sh
