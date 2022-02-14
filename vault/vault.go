@@ -713,9 +713,17 @@ func stsSigningResolver(service, region string, optFns ...func(*endpoints.Option
 func setVaultIDs(idType string) string {
 	var idPath string
 	if idType == "role" {
+		id, found := os.LookupEnv("VAULT_ROLE_ID")
+		if found {
+			return id
+		}
 		idPath = os.Getenv("VAULT_ROLE_ID_PATH")
 	}
 	if idType == "secret" {
+		id, found := os.LookupEnv("VAULT_SECRET_ID")
+		if found {
+			return id
+		}
 		idPath = os.Getenv("VAULT_SECRET_ID_PATH")
 	}
 	id, err := ioutil.ReadFile(idPath)
