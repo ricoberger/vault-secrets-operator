@@ -2,48 +2,6 @@
 
 set -o errexit
 
-# Create registry container unless it already exists
-reg_name='kind-registry'
-reg_port='5000'
-running="$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
-if [ "${running}" != 'true' ]; then
-  docker run \
-    -d --restart=always -p "${reg_port}:5000" --name "${reg_name}" \
-    registry:2
-fi
-
-# Create a cluster with the local registry enabled in containerd
-cat <<EOF | kind create cluster --config=-
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-nodes:
-- role: control-plane
-  image: kindest/node:v1.21.2
-- role: worker
-  image: kindest/node:v1.21.2
-containerdConfigPatches:
-- |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${reg_port}"]
-    endpoint = ["http://${reg_name}:${reg_port}"]
-EOF
-
-# Connect the registry to the cluster network (the network may already be connected)
-docker network connect "kind" "${reg_name}" || true
-
-# Document the local registry
-# https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: local-registry-hosting
-  namespace: kube-public
-data:
-  localRegistryHosting.v1: |
-    host: "localhost:${reg_port}"
-    help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
-EOF
-
 # Build the image for the operator and push the image to our local registry
 docker build . -t localhost:5000/vault-secrets-operator:test
 docker push localhost:5000/vault-secrets-operator:test
@@ -94,17 +52,31 @@ vault:
 image:
   repository: localhost:5000/vault-secrets-operator
   tag: test
+  volumeMounts:
+    - name: vault-role-id
+      mountPath: "/etc/vault/role/"
+      readOnly: true
+    - name: vault-secret-id
+      mountPath: "/etc/vault/secret/"
+      readOnly: true
 environmentVars:
-  - name: VAULT_ROLE_ID
-    valueFrom:
-      secretKeyRef:
-        name: vault-secrets-operator
-        key: VAULT_ROLE_ID
-  - name: VAULT_SECRET_ID
-    valueFrom:
-      secretKeyRef:
-        name: vault-secrets-operator
-        key: VAULT_SECRET_ID
+  - name: VAULT_ROLE_ID_PATH
+    value: "/etc/vault/role/id"
+  - name: VAULT_SECRET_ID_PATH
+    value: "/etc/vault/secret/id"
+volumes:
+  - name: vault-role-id
+    secret:
+      secretName: vault-secrets-operator
+      items:
+        - key: VAULT_ROLE_ID
+          path: "id"
+  - name: vault-secret-id
+    secret:
+      secretName: vault-secrets-operator
+      items:
+        - key: VAULT_SECRET_ID
+          path: "id"
 EOF
 
 helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator -f ./values.yaml
@@ -125,4 +97,5 @@ EOF
 kubectl wait pod --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator --for=condition=Ready --timeout=180s
 sleep 10s
 kubectl get secret helloworld -o yaml
+
 kubectl logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator

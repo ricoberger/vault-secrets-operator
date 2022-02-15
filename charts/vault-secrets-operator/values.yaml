@@ -36,16 +36,10 @@ environmentVars: []
   #   value: "30"
 
   # AppRole auth method:
-  # - name: VAULT_ROLE_ID
-  #   valueFrom:
-  #     secretKeyRef:
-  #       name: vault-secrets-operator
-  #       key: VAULT_ROLE_ID
-  # - name: VAULT_SECRET_ID
-  #   valueFrom:
-  #     secretKeyRef:
-  #       name: vault-secrets-operator
-  #       key: VAULT_SECRET_ID
+  # - name: VAULT_ROLE_ID_PATH
+  #   value: "/etc/vault/role/id"
+  # - name: VAULT_SECRET_ID_PATH
+  #   value: "/etc/vault/secret/id"
   # - name: VAULT_TOKEN_RENEWAL_RETRY_INTERVAL
   #   value: "30"
   # - name: VAULT_TOKEN_MAX_TTL
@@ -67,7 +61,7 @@ environmentVars: []
 #
 # If the auth method is 'approle' you must specify a path for the AppRole Auth
 # method with 'appRolePath', by default it is 'auth/approle'. Also
-# 'VAULT_ROLE_ID' and 'VAULT_SECRET_ID' must be set for this auth method. With
+# 'VAULT_ROLE_ID_PATH' and 'VAULT_SECRET_ID_PATH' must be set for this auth method. With
 # this method, the renewal interval is set by default to a half of the token
 # lease duration (can be overwritten with 'VAULT_TOKEN_RENEWAL_INTERVAL'), the
 # token maximum TTL is set by default to 1382400 seconds (16 days, can be
@@ -144,6 +138,18 @@ volumes: []
   #     items:
   #       - key: ca.pem
   #         path: ca.pem
+  # - name: vault-role-id
+  #   secret:
+  #     secretName: vault-secrets-operator
+  #     items:
+  #       - key: VAULT_ROLE_ID
+  #         path: "id"
+  # - name: vault-secret-id
+  #   secret:
+  #     secretName: vault-secrets-operator
+  #     items:
+  #       - key: VAULT_SECRET_ID
+  #         path: "id"
 
 nodeSelector: {}
 
