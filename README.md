@@ -176,6 +176,39 @@ vault:
   authMethod: approle
 ```
 
+Mounting the vault ROLE_ID and SECRET_ID secrets as volumes is supported.  It requires `image.volumeMounts` to be populated, `VAULT_ROLE_ID_PATH` and `VAULT_SECRET_ID_PATH` to be set in `environmentVars`(or `export` as shell variables), and `volumes` to be populated.  See example below:
+
+NOTE: `image.volumeMounts[].mountPath` must match `environmentVars[].value` for the respective ROLE_ID or SECRET_ID.  Reference [Kubernetes: Using Secrets as files from a Pod](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod)
+
+```yaml
+image:
+  volumeMounts:
+    - name: vault-role-id
+      mountPath: "/etc/vault/role/"
+      readOnly: true
+    - name: vault-secret-id
+      mountPath: "/etc/vault/secret/"
+      readOnly: true
+environmentVars:
+  - name: VAULT_ROLE_ID_PATH
+    value: "/etc/vault/role/id"
+  - name: VAULT_SECRET_ID_PATH
+    value: "/etc/vault/secret/id"
+volumes:
+  - name: vault-role-id
+    secret:
+      secretName: vault-secrets-operator
+      items:
+        - key: VAULT_ROLE_ID
+          path: "id"
+  - name: vault-secret-id
+    secret:
+      secretName: vault-secrets-operator
+      items:
+        - key: VAULT_SECRET_ID
+          path: "id"
+```
+
 ### AWS Auth Method
 
 You can use either ec2 or iam auth types on eks clusters to authenticate against the Vault API. [here](https://www.vaultproject.io/docs/auth/aws)
