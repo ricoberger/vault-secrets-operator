@@ -168,6 +168,16 @@ serviceMonitor:
 # A priority class can be optionally attached to the pod spec if one is needed
 # priorityClassName: high
 
+networkPolicy:
+  enabled: false
+  egress: []
+    # - to:
+    #     - ipBlock:
+    #       cidr: 10.0.0.0/24
+    #   ports:
+    #     - port: 443
+    #       protocol: TCP
+
 tests:
   # imagePullSecrets:
   # - imagePullSecret
