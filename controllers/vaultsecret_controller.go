@@ -34,6 +34,11 @@ const (
 	conditionReasonMergeFailed  = "MergeFailed"
 )
 
+const (
+	kvEngine  = "kv"
+	pkiEngine = "pki"
+)
+
 // VaultSecretReconciler reconciles a VaultSecret object
 type VaultSecretReconciler struct {
 	client.Client
@@ -87,14 +92,29 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// client during start up, to not require a default Vault Role.
 	var data map[string][]byte
 
+	var vaultClient *vault.Client
+
 	if instance.Spec.VaultRole != "" {
 		log.WithValues("vaultRole", instance.Spec.VaultRole).Info("Create client to get secret from Vault")
-		vaultClient, err := vault.CreateClient(instance.Spec.VaultRole)
+		vaultClient, err = vault.CreateClient(instance.Spec.VaultRole)
 		if err != nil {
 			// Error creating the Vault client - requeue the request.
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
+	} else {
+		log.Info("Use shared client to get secret from Vault")
+		if vault.SharedClient == nil {
+			err = fmt.Errorf("shared client not initialized and vaultRole property missing")
+			log.Error(err, "Could not get secret from Vault")
+			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		} else {
+			vaultClient = vault.SharedClient
+		}
+	}
+
+	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == kvEngine {
 		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
@@ -102,19 +122,17 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
-	} else {
-		log.Info("Use shared client to get secret from Vault")
-		if vault.SharedClient == nil {
-			err = fmt.Errorf("shared client not initilized and vaultRole property missing")
-			log.Error(err, "Could not get secret from Vault")
+	} else if instance.Spec.SecretEngine == pkiEngine {
+		if instance.Spec.PKIRole == "" {
+			err := fmt.Errorf("PKIRole must be set when generating a certificate")
+			log.Error(err, "Could not get certificate from vault")
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
-		data, err = vault.SharedClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
+		data, err = vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.PKIRole, instance.Spec.EngineOptions)
 		if err != nil {
-			// Error while getting the secret from Vault - requeue the request.
-			log.Error(err, "Could not get secret from vault")
+			log.Error(err, "Could not get certificate from vault")
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
