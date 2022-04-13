@@ -140,7 +140,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 		// Requeue before expiration
 		log.Info(fmt.Sprintf("Certificate will expire on %s", expiration.String()))
-		ra := expiration.Sub(time.Now()) + vaultClient.PKIRenew
+		ra := expiration.Sub(time.Now()) - vaultClient.PKIRenew
 		if ra == 0 {
 			reconcileResult.Requeue = true
 		} else {
