@@ -18,8 +18,6 @@ func convertData(data map[string]interface{}) map[string][]byte {
 }
 
 func (c *Client) GetCertificate(path string, role string, options map[string]string) (map[string][]byte, *time.Time, error) {
-	log.Info(fmt.Sprintf("Get certificate %s", ""))
-
 	optionsI := make(map[string]interface{}, len(options))
 	for k, v := range options {
 		optionsI[k] = v
