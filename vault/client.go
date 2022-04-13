@@ -168,12 +168,40 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 		}
 	}
 
-	// Convert the secret data for a Kubernetes secret. We only add the provided
-	// keys to the resulting data or if there are no keys provided we add all
-	// keys of the secret.
-	// To support nested secret values we check the type of the value first. If
-	// The type is 'map[string]interface{}' we marshal the value to a JSON
-	// string, which can be used for the Kubernetes secret.
+	data, err := convertData(secretData, keys, isBinary)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the data map is empty we return an error. This can happend, if the
+	// secret which was retrieved from Vault is under a KVv2 secrets engine, but
+	// the secret engine was not provided in the cr for the secret. Then the
+	// returned secret looks like this: &api.Secret{RequestID:\"be7b671f-a097-1081-15ec-b4710f2a6249\", LeaseID:\"\", LeaseDuration:0, Renewable:false, Data:map[string]interface {}(nil), Warnings:[]string{\"Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, use 'vault kv get' for this operation.\"}, Auth:(*api.SecretAuth)(nil), WrapInfo:(*api.SecretWrapInfo)(nil)}"}
+	if len(data) == 0 {
+		return nil, fmt.Errorf("invalid secret data")
+	}
+	return data, nil
+}
+
+// contains checks if a given key is in a slice of keys.
+func contains(key string, keys []string) bool {
+	for _, k := range keys {
+		if k == key {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Convert the secret data for a Kubernetes secret. We only add the provided
+// keys to the resulting data or if there are no keys provided we add all
+// keys of the secret.
+// To support nested secret values we check the type of the value first. If
+// The type is 'map[string]interface{}' we marshal the value to a JSON
+// string, which can be used for the Kubernetes secret.
+func convertData(secretData map[string]interface{}, keys []string, isBinary bool) (map[string][]byte, error) {
+	var err error
 	data := make(map[string][]byte)
 	for key, value := range secretData {
 		if value == nil {
@@ -206,25 +234,7 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 		}
 	}
 
-	// If the data map is empty we return an error. This can happend, if the
-	// secret which was retrieved from Vault is under a KVv2 secrets engine, but
-	// the secret engine was not provided in the cr for the secret. Then the
-	// returned secret looks like this: &api.Secret{RequestID:\"be7b671f-a097-1081-15ec-b4710f2a6249\", LeaseID:\"\", LeaseDuration:0, Renewable:false, Data:map[string]interface {}(nil), Warnings:[]string{\"Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, use 'vault kv get' for this operation.\"}, Auth:(*api.SecretAuth)(nil), WrapInfo:(*api.SecretWrapInfo)(nil)}"}
-	if len(data) == 0 {
-		return nil, fmt.Errorf("invalid secret data")
-	}
 	return data, nil
-}
-
-// contains checks if a given key is in a slice of keys.
-func contains(key string, keys []string) bool {
-	for _, k := range keys {
-		if k == key {
-			return true
-		}
-	}
-
-	return false
 }
 
 // kvPreflightVersionRequest checks which version of the key values secrets
