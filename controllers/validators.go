@@ -10,8 +10,8 @@ func ValidatePKI(instance *ricobergerdev1alpha1.VaultSecret) error {
 		return nil
 	}
 
-	if instance.Spec.PKIRole == "" {
-		return fmt.Errorf("`PKIRole' must be set")
+	if instance.Spec.Role == "" {
+		return fmt.Errorf("`Role' must be set")
 	}
 
 	if _, ok := instance.Spec.EngineOptions["common_name"]; !ok {

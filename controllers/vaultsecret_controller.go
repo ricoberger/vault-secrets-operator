@@ -131,7 +131,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		var expiration *time.Time
-		data, expiration, err = vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.PKIRole, instance.Spec.EngineOptions)
+		data, expiration, err = vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.Role, instance.Spec.EngineOptions)
 		if err != nil {
 			log.Error(err, "Could not get certificate from vault")
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)

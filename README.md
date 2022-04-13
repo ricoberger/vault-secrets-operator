@@ -523,7 +523,7 @@ metadata:
 spec:
   path: pki
   secretEngine: pki
-  PKIRole: example-dot-com
+  role: example-dot-com
   engineOptions:
     common_name: www.my-website.com
   type: Opaque
@@ -559,7 +559,7 @@ metadata:
 spec:
   path: pki
   secretEngine: pki
-  PKIRole: example-dot-com
+  role: example-dot-com
   engineOptions:
     common_name: www.my-website.com
   templates:
