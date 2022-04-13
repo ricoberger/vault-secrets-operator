@@ -32,6 +32,7 @@ const (
 	conditionReasonUpdated      = "Updated"
 	conditionReasonUpdateFailed = "UpdateFailed"
 	conditionReasonMergeFailed  = "MergeFailed"
+	conditionInvalidResource    = "InvalidResource"
 )
 
 const (
@@ -123,18 +124,28 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 	} else if instance.Spec.SecretEngine == pkiEngine {
-		if instance.Spec.PKIRole == "" {
-			err := fmt.Errorf("PKIRole must be set when generating a certificate")
+		if err := ValidatePKI(instance); err != nil {
+			log.Error(err, "Resource validation failed")
+			r.updateConditions(ctx, log, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		}
+
+		var expiration *time.Time
+		data, expiration, err = vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.PKIRole, instance.Spec.EngineOptions)
+		if err != nil {
 			log.Error(err, "Could not get certificate from vault")
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
-		data, err = vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.PKIRole, instance.Spec.EngineOptions)
-		if err != nil {
-			log.Error(err, "Could not get certificate from vault")
-			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
-			return ctrl.Result{}, err
+		// Requeue before expiration
+		log.Info(fmt.Sprintf("Certificate will expire on %s", expiration.String()))
+		ra := expiration.Sub(time.Now()) + vaultClient.PKIRenew
+		if ra == 0 {
+			reconcileResult.Requeue = true
+		} else {
+			reconcileResult.RequeueAfter = ra
+			log.Info(fmt.Sprintf("Certificate will be renewed on %s", time.Now().Add(ra).String()))
 		}
 	}
 

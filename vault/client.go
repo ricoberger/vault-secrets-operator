@@ -40,6 +40,8 @@ type Client struct {
 	// failedRenewTokenAttempts is the number of failed renew token attempts, if the renew token function fails 5 times
 	// the liveness probe will fail, to force a restart of the operator.
 	failedRenewTokenAttempts int
+	// PKIRenew minimum remaining period of validity before certificate renewal
+	PKIRenew time.Duration
 }
 
 // PerformRenewToken returns whether the operator should renew its token

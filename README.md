@@ -250,6 +250,8 @@ If you deploy the Vault Secrets Operator via Helm you have to set the `vault.aut
 
 ## Usage
 
+### Secret Engine
+
 Create two Vault secrets `example-vaultsecret`:
 
 ```sh
@@ -508,6 +510,73 @@ secrets:
 #### Notes on templating
 
 * All secrets data is converted to string before being passed to the templating engine, so using binary data will not work well, or at least be unpredictable.
+
+### PKI Engine
+
+You can generate certificates using the PKI Engine like so:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: test-pki
+spec:
+  path: pki
+  secretEngine: pki
+  PKIRole: example-dot-com
+  engineOptions:
+    common_name: www.my-website.com
+  type: Opaque
+```
+
+You can pass any of the parameters supported by the PKI engine in `engineOptions`.
+A list is available here: https://www.vaultproject.io/api-docs/secret/pki#parameters-15
+
+This will generate the following secret:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-pki
+data:
+  certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tLi4u
+  expiration: MTY0OTc2OTIwMg==
+  issuing_ca: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tLi4u
+  private_key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLS4uLg==
+  private_key_type: cnNh
+  serial_number: MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA6MDA=
+type: Opaque
+```
+
+Like with the secret engine, you can template the resulting Kubernetes secret:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: test-pki
+spec:
+  path: pki
+  secretEngine: pki
+  PKIRole: example-dot-com
+  engineOptions:
+    common_name: www.my-website.com
+  templates:
+    tls.crt: "{% .Secrets.certificate %}"
+    tls.key: "{% .Secrets.private_key %}"
+    ca.crt: "{% .Secrets.issuing_ca %}"
+  type: Opaque
+```
+
+The following fields are available:
+* `certificate`
+* `expiration`
+* `issuing_ca`
+* `private_key`
+* `private_key_type`
+* `serial_number`
+
 
 ### Using specific Vault Role for secrets
 
