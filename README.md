@@ -526,6 +526,7 @@ spec:
   role: example-dot-com
   engineOptions:
     common_name: www.my-website.com
+    ttl: "5d"
   type: Opaque
 ```
 
