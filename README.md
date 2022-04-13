@@ -578,6 +578,10 @@ The following fields are available:
 * `private_key_type`
 * `serial_number`
 
+#### Certificate Renewal
+
+Certificate are renewed before expiration. You can set how long before expiration you want to renew by setting the
+`VAULT_PKI_RENEW` environment variable. The default is 1 hour.
 
 ### Using specific Vault Role for secrets
 
