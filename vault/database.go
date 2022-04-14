@@ -21,10 +21,7 @@ func (c *Client) GetDatabaseCreds(path string, role string, mylog logr.Logger) (
 		return nil, nil, err
 	}
 
-	var expiration time.Time
-	if r.Renewable {
-		expiration = time.Now().Add(time.Duration(r.LeaseDuration) * time.Second)
-	}
+	expiration := time.Now().Add(time.Duration(r.LeaseDuration) * time.Second)
 
 	return data, &expiration, nil
 }
