@@ -36,8 +36,9 @@ const (
 )
 
 const (
-	kvEngine  = "kv"
-	pkiEngine = "pki"
+	kvEngine       = "kv"
+	pkiEngine      = "pki"
+	databaseEngine = "database"
 )
 
 // VaultSecretReconciler reconciles a VaultSecret object
@@ -147,6 +148,24 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			reconcileResult.RequeueAfter = ra
 			log.Info(fmt.Sprintf("Certificate will be renewed on %s", time.Now().Add(ra).String()))
 		}
+	} else if instance.Spec.SecretEngine == databaseEngine {
+		if err := ValidateDatabase(instance); err != nil {
+			log.Error(err, "Resource validation failed")
+			r.updateConditions(ctx, log, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		}
+
+		var expiration *time.Time
+		data, expiration, err = vaultClient.GetDatabaseCreds(instance.Spec.Path, instance.Spec.Role, log)
+		if err != nil {
+			log.Error(err, "Could not get database credentials from vault")
+			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+		}
+
+		log.Info(fmt.Sprintf("Database credentials will expire on %s", expiration.String()))
+		ra := expiration.Sub(time.Now()) - vaultClient.DatabaseRenew
+		reconcileResult.RequeueAfter = ra
+		log.Info(fmt.Sprintf("Database credentials will be renewed on %s", time.Now().Add(ra).String()))
 	}
 
 	// Define a new Secret object

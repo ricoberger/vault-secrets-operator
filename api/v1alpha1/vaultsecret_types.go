@@ -38,7 +38,7 @@ type VaultSecretSpec struct {
 	SecretEngine string `json:"secretEngine,omitempty"`
 	// EngineOptions specifies options for the engine.
 	EngineOptions map[string]string `json:"engineOptions,omitempty"`
-	// Role specifies the role to use with PKI engine
+	// Role specifies the role to use with PKI and Database engines
 	Role string `json:"role,omitempty"`
 	// Type is the type of the Kubernetes secret, which will be created by the
 	// Vault Secrets Operator.

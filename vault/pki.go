@@ -33,8 +33,7 @@ func (c *Client) GetCertificate(path string, role string, options map[string]str
 		"issuing_ca",
 		"private_key",
 		"private_key_type",
-		"serial_number",
-	}, false)
+		"serial_number"}, false)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -20,3 +20,15 @@ func ValidatePKI(instance *ricobergerdev1alpha1.VaultSecret) error {
 
 	return nil
 }
+
+func ValidateDatabase(instance *ricobergerdev1alpha1.VaultSecret) error {
+	if instance.Spec.SecretEngine != "database" {
+		return nil
+	}
+
+	if instance.Spec.Role == "" {
+		return fmt.Errorf("`Role' must be set")
+	}
+
+	return nil
+}

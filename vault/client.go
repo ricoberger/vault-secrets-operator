@@ -42,6 +42,8 @@ type Client struct {
 	failedRenewTokenAttempts int
 	// PKIRenew minimum remaining period of validity before certificate renewal
 	PKIRenew time.Duration
+	// DatabaseRenew is the minimum remaining period of validity before credential renewal
+	DatabaseRenew time.Duration
 }
 
 // PerformRenewToken returns whether the operator should renew its token
