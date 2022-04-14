@@ -104,7 +104,7 @@ func (c *Client) GetHealth(threshold int) error {
 }
 
 // GetSecret returns the value for a given secret.
-func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
+func (c *Client) GetSecret(path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 

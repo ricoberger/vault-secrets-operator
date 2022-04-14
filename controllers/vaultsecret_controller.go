@@ -35,12 +35,6 @@ const (
 	conditionInvalidResource    = "InvalidResource"
 )
 
-const (
-	kvEngine       = "kv"
-	pkiEngine      = "pki"
-	databaseEngine = "database"
-)
-
 // VaultSecretReconciler reconciles a VaultSecret object
 type VaultSecretReconciler struct {
 	client.Client
@@ -116,15 +110,15 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == kvEngine {
-		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
+	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == ricobergerdev1alpha1.KVEngine {
+		data, err = vaultClient.GetSecret(instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
 			log.Error(err, "Could not get secret from vault")
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
-	} else if instance.Spec.SecretEngine == pkiEngine {
+	} else if instance.Spec.SecretEngine == ricobergerdev1alpha1.PKIEngine {
 		if err := ValidatePKI(instance); err != nil {
 			log.Error(err, "Resource validation failed")
 			r.updateConditions(ctx, log, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
@@ -148,7 +142,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			reconcileResult.RequeueAfter = ra
 			log.Info(fmt.Sprintf("Certificate will be renewed on %s", time.Now().Add(ra).String()))
 		}
-	} else if instance.Spec.SecretEngine == databaseEngine {
+	} else if instance.Spec.SecretEngine == ricobergerdev1alpha1.DatabaseEngine {
 		if err := ValidateDatabase(instance); err != nil {
 			log.Error(err, "Resource validation failed")
 			r.updateConditions(ctx, log, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)

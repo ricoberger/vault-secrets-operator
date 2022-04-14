@@ -5,6 +5,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type SecretEngine string
+
+const (
+	KVEngine       SecretEngine = "kv"
+	PKIEngine      SecretEngine = "pki"
+	DatabaseEngine SecretEngine = "database"
+)
+
 // VaultSecretSpec defines the desired state of VaultSecret
 type VaultSecretSpec struct {
 	// VaultRole can be used to specify the Vault role, which should be used to get the secret from Vault. If the
@@ -30,12 +38,11 @@ type VaultSecretSpec struct {
 	Templates map[string]string `json:"templates,omitempty"`
 	// Path is the path of the corresponding secret in Vault.
 	Path string `json:"path"`
-	// SecretEngine specifies the type of the Vault secret engine in which the
-	// secret is stored. Currently the 'KV Secrets Engine - Version 1' and
-	// 'KV Secrets Engine - Version 2' are supported. The value must be 'kv'. If
-	// the value is omitted or an other values is used the Vault Secrets
-	// Operator will try to use the KV secret engine.
-	SecretEngine string `json:"secretEngine,omitempty"`
+	// SecretEngine specifies the type of the Vault secret engine to use.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=kv;pki;database
+	// +kubebuilder:default:=kv
+	SecretEngine SecretEngine `json:"secretEngine,omitempty"`
 	// EngineOptions specifies options for the engine.
 	EngineOptions map[string]string `json:"engineOptions,omitempty"`
 	// Role specifies the role to use with PKI and Database engines

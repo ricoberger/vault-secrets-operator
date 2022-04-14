@@ -6,8 +6,8 @@ import (
 )
 
 func ValidatePKI(instance *ricobergerdev1alpha1.VaultSecret) error {
-	if instance.Spec.SecretEngine != "pki" {
-		return nil
+	if instance.Spec.SecretEngine != ricobergerdev1alpha1.PKIEngine {
+		return fmt.Errorf("cannot validate non-PKI resource")
 	}
 
 	if instance.Spec.Role == "" {
@@ -23,7 +23,7 @@ func ValidatePKI(instance *ricobergerdev1alpha1.VaultSecret) error {
 
 func ValidateDatabase(instance *ricobergerdev1alpha1.VaultSecret) error {
 	if instance.Spec.SecretEngine != "database" {
-		return nil
+		return fmt.Errorf("cannot validate non-Database resource")
 	}
 
 	if instance.Spec.Role == "" {
