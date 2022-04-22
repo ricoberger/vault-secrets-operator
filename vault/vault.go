@@ -174,7 +174,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
-			PKIRenew:                  PKIRenew,
+			pkiRenew:                  PKIRenew,
 		}, nil
 	}
 
@@ -235,7 +235,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
-			PKIRenew:                  PKIRenew,
+			pkiRenew:                  PKIRenew,
 		}, nil
 	}
 
@@ -311,7 +311,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				}
 				return nil
 			},
-			PKIRenew: PKIRenew,
+			pkiRenew: PKIRenew,
 		}, nil
 	}
 
@@ -383,7 +383,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
-			PKIRenew:                  PKIRenew,
+			pkiRenew:                  PKIRenew,
 		}, nil
 
 	}
@@ -573,7 +573,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				}
 				return nil
 			},
-			PKIRenew: PKIRenew,
+			pkiRenew: PKIRenew,
 		}, nil
 	}
 
@@ -710,7 +710,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				}
 				return nil
 			},
-			PKIRenew: PKIRenew,
+			pkiRenew: PKIRenew,
 		}, nil
 	}
 

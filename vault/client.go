@@ -40,8 +40,8 @@ type Client struct {
 	// failedRenewTokenAttempts is the number of failed renew token attempts, if the renew token function fails 5 times
 	// the liveness probe will fail, to force a restart of the operator.
 	failedRenewTokenAttempts int
-	// PKIRenew minimum remaining period of validity before certificate renewal
-	PKIRenew time.Duration
+	// pkiRenew minimum remaining period of validity before certificate renewal
+	pkiRenew time.Duration
 }
 
 // PerformRenewToken returns whether the operator should renew its token
@@ -320,4 +320,8 @@ func (c *Client) addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 		p = strings.TrimPrefix(p, mountPath)
 		return path.Join(mountPath, apiPrefix, p)
 	}
+}
+
+func (c *Client) GetPKIRenew() time.Duration {
+	return c.pkiRenew
 }
