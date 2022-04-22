@@ -96,6 +96,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultSecretID := setVaultIDs("secret")
 	vaultTokenMaxTTL := os.Getenv("VAULT_TOKEN_MAX_TTL")
 	vaultNamespace := os.Getenv("VAULT_NAMESPACE")
+	vaultPKIRenew := os.Getenv("VAULT_PKI_RENEW")
 
 	// Create new Vault configuration. This configuration is used to create the
 	// API client. We set the timeout of the HTTP client to 10 seconds.
@@ -111,6 +112,15 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	renewToken, err := strconv.ParseBool(vaultRenewToken)
 	if err != nil {
 		renewToken = true
+	}
+
+	if len(vaultPKIRenew) == 0 {
+		vaultPKIRenew = "1h"
+	}
+
+	PKIRenew, err := time.ParseDuration(vaultPKIRenew)
+	if err != nil {
+		return nil, err
 	}
 
 	// Check which authentication method should be used.
@@ -164,6 +174,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			pkiRenew:                  PKIRenew,
 		}, nil
 	}
 
@@ -224,6 +235,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			pkiRenew:                  PKIRenew,
 		}, nil
 	}
 
@@ -299,6 +311,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				}
 				return nil
 			},
+			pkiRenew: PKIRenew,
 		}, nil
 	}
 
@@ -370,6 +383,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			pkiRenew:                  PKIRenew,
 		}, nil
 
 	}
@@ -559,6 +573,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				}
 				return nil
 			},
+			pkiRenew: PKIRenew,
 		}, nil
 	}
 
@@ -695,6 +710,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				}
 				return nil
 			},
+			pkiRenew: PKIRenew,
 		}, nil
 	}
 
