@@ -27,6 +27,9 @@ type VaultSecretSpec struct {
 	// existing data keys in a secret with the loaded keys from Vault. The second valid value is "Merge" wiche merges
 	// the loaded keys from Vault with the existing keys in a secret. Duplicated keys will be replaced with the value
 	// from Vault. Other values are not valid for this field.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=Merge;Replace
+	// +kubebuilder:default:=Replace
 	ReconcileStrategy string `json:"reconcileStrategy,omitempty"`
 	// Keys is an array of Keys, which should be included in the Kubernetes
 	// secret. If the Keys field is ommitted all keys from the Vault secret will

@@ -116,7 +116,6 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if instance.Spec.SecretEngine == ricobergerdev1alpha1.KVEngine {
 		secret, err := vaultClient.GetSecret(instance.Spec.Path, instance.Spec.Version, instance.Spec.VaultNamespace)
 		if err != nil {
-			// Error while getting the secret from Vault - requeue the request.
 			log.Error(err, "Could not get secret from vault")
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
