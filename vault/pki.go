@@ -31,7 +31,7 @@ func (c *Client) GetCertificate(path string, role string, options map[string]str
 	return secret, &expiresAt, nil
 }
 
-func (c *Client) PKIConvertData(secret *api.Secret) (map[string][]byte, error) {
+func (c *Client) PKIRenderData(secret *api.Secret) (map[string][]byte, error) {
 	return convertData(secret.Data, []string{
 		"certificate",
 		"expiration",

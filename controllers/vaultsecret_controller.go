@@ -110,6 +110,9 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
+	var expiresAt *time.Time
+	var requeueAfter time.Duration
+
 	if instance.Spec.SecretEngine == ricobergerdev1alpha1.KVEngine {
 		secret, err := vaultClient.GetSecret(instance.Spec.Path, instance.Spec.Version, instance.Spec.VaultNamespace)
 		if err != nil {
@@ -139,20 +142,14 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		data, err = vaultClient.PKIConvertData(secret)
+		data, err = vaultClient.PKIRenderData(secret)
 		if err != nil {
 			log.Error(err, "Could not render certificate data")
 			r.updateConditions(ctx, log, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
-		r.updateExpiration(ctx, log, instance, expiresAt)
-
-		// Requeue before expiration
-		log.Info(fmt.Sprintf("Certificate will expire on %s", expiresAt.String()))
-		ra := expiresAt.Sub(time.Now()) - vaultClient.PKIRenew
-		reconcileResult.RequeueAfter = ra
-		log.Info(fmt.Sprintf("Certificate will be renewed on %s", time.Now().Add(ra).String()))
+		requeueAfter = expiresAt.Sub(time.Now()) - vaultClient.PKIRenew
 	} else if instance.Spec.SecretEngine == ricobergerdev1alpha1.DatabaseEngine {
 		if err := ValidateDatabase(instance); err != nil {
 			log.Error(err, "Resource validation failed")
@@ -174,12 +171,14 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		r.updateExpiration(ctx, log, instance, expiresAt)
+		requeueAfter = expiresAt.Sub(time.Now()) - vaultClient.DatabaseRenew
+	}
 
-		log.Info(fmt.Sprintf("Database credentials will expire on %s", expiresAt.String()))
-		ra := expiresAt.Sub(time.Now()) - vaultClient.DatabaseRenew
-		reconcileResult.RequeueAfter = ra
-		log.Info(fmt.Sprintf("Database credentials will be renewed on %s", time.Now().Add(ra).String()))
+	if expiresAt != nil {
+		r.updateExpiration(ctx, log, instance, expiresAt)
+		reconcileResult.RequeueAfter = requeueAfter
+		log.Info(fmt.Sprintf("Secret %s will expire on %s", instance.Name, expiresAt.String()))
+		log.Info(fmt.Sprintf("Secret %s will be renewed on %s", instance.Name, time.Now().Add(requeueAfter).String()))
 	}
 
 	// Define a new Secret object
