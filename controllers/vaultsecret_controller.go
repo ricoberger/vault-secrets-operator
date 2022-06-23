@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/hashicorp/vault/api"
 	"os"
 	"text/template"
 	"time"
@@ -134,7 +135,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		secret, expiresAt, err := vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.Role, instance.Spec.EngineOptions)
+		var secret *api.Secret
+		secret, expiresAt, err = vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.Role, instance.Spec.EngineOptions)
 		if err != nil {
 			log.Error(err, "Could not get certificate from vault")
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
@@ -156,7 +158,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		secret, expiresAt, err := vaultClient.GetDatabaseCreds(instance.Spec.Path, instance.Spec.Role)
+		var secret *api.Secret
+		secret, expiresAt, err = vaultClient.GetDatabaseCreds(instance.Spec.Path, instance.Spec.Role)
 		if err != nil {
 			log.Error(err, "Could not get database credentials from vault")
 			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
@@ -248,10 +251,10 @@ func (r *VaultSecretReconciler) updateExpiration(ctx context.Context, log logr.L
 	instance.Status.Expires = true
 	instance.Status.ExpiresAt = expiresAt.String()
 
-	err := r.Status().Update(ctx, instance)
-	if err != nil {
-		log.Error(err, "Could not update expiration in status")
-	}
+	//err := r.Status().Update(ctx, instance)
+	//if err != nil {
+	//	log.Error(err, "Could not update expiration in status")
+	//}
 }
 
 func (r *VaultSecretReconciler) updateConditions(ctx context.Context, log logr.Logger, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {

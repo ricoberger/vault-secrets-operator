@@ -71,7 +71,7 @@ type VaultSecretSpec struct {
 // VaultSecretStatus defines the observed state of VaultSecret
 type VaultSecretStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	Expires    bool               `json:"expires"`
+	Expires    bool               `json:"expires,omitempty"`
 	ExpiresAt  string             `json:"expiresAt,omitempty"`
 }
 
@@ -82,6 +82,7 @@ type VaultSecretStatus struct {
 // +kubebuilder:printcolumn:name="Succeeded",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].status`,description="Indicates if the secret was created/updated successfully"
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].reason`,description="Reason for the current status"
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].message`,description="Message with more information, regarding the current status"
+// +kubebuilder:printcolumn:name="Expires At",type=string,JSONPath=`.status.expiresAt`,description="Secret expiration time"
 // +kubebuilder:printcolumn:name="Last Transition",type=date,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].lastTransitionTime`,description="Time when the condition was updated the last time"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Time when this VaultSecret was created"
 // +kubebuilder:subresource:status
