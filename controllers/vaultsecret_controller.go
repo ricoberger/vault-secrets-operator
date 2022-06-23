@@ -114,7 +114,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	var expiresAt *time.Time
 	var requeueAfter time.Duration
 
-	if instance.Spec.SecretEngine == ricobergerdev1alpha1.KVEngine {
+	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == ricobergerdev1alpha1.KVEngine {
 		secret, err := vaultClient.GetSecret(instance.Spec.Path, instance.Spec.Version, instance.Spec.VaultNamespace)
 		if err != nil {
 			log.Error(err, "Could not get secret from vault")
