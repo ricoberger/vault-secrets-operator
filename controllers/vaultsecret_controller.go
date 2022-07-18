@@ -12,7 +12,6 @@ import (
 	"github.com/ricoberger/vault-secrets-operator/vault"
 
 	"github.com/Masterminds/sprig"
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,6 +20,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
@@ -43,7 +43,6 @@ const (
 // VaultSecretReconciler reconciles a VaultSecret object
 type VaultSecretReconciler struct {
 	client.Client
-	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
@@ -60,7 +59,7 @@ type VaultSecretReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
 func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("vaultsecret", req.NamespacedName)
+	log := logr.FromContext(ctx)
 
 	// Set reconciliation if the vault-secret does not specify a version.
 	reconcileResult := ctrl.Result{}
@@ -100,7 +99,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		vaultClient, err = vault.CreateClient(instance.Spec.VaultRole)
 		if err != nil {
 			// Error creating the Vault client - requeue the request.
-			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 	} else {
@@ -108,7 +107,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if vault.SharedClient == nil {
 			err = fmt.Errorf("shared client not initialized and vaultRole property missing")
 			log.Error(err, "Could not get secret from Vault")
-			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		} else {
 			vaultClient = vault.SharedClient
@@ -120,13 +119,13 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
 			log.Error(err, "Could not get secret from vault")
-			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 	} else if instance.Spec.SecretEngine == pkiEngine {
 		if err := ValidatePKI(instance); err != nil {
 			log.Error(err, "Resource validation failed")
-			r.updateConditions(ctx, log, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
@@ -134,7 +133,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		data, expiration, err = vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.Role, instance.Spec.EngineOptions)
 		if err != nil {
 			log.Error(err, "Could not get certificate from vault")
-			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
@@ -154,7 +153,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		// Error while creating the Kubernetes secret - requeue the request.
 		log.Error(err, "Could not create Kubernetes secret")
-		r.updateConditions(ctx, log, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
+		r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
 		return ctrl.Result{}, err
 	}
 
@@ -172,16 +171,16 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		err = r.Create(ctx, secret)
 		if err != nil {
 			log.Error(err, "Could not create secret")
-			r.updateConditions(ctx, log, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
 		// Secret created successfully - requeue only if no version is specified
-		r.updateConditions(ctx, log, instance, conditionReasonCreated, "Secret was created", metav1.ConditionTrue)
+		r.updateConditions(ctx, instance, conditionReasonCreated, "Secret was created", metav1.ConditionTrue)
 		return reconcileResult, nil
 	} else if err != nil {
 		log.Error(err, "Could not create secret")
-		r.updateConditions(ctx, log, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
+		r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
 		return ctrl.Result{}, err
 	}
 
@@ -195,26 +194,26 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		err = r.Update(ctx, secret)
 		if err != nil {
 			log.Error(err, "Could not update secret")
-			r.updateConditions(ctx, log, instance, conditionReasonMergeFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonMergeFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
-		r.updateConditions(ctx, log, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
+		r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 	} else {
 		log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
 		err = r.Update(ctx, secret)
 		if err != nil {
 			log.Error(err, "Could not update secret")
-			r.updateConditions(ctx, log, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
-		r.updateConditions(ctx, log, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
+		r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 	}
 
 	// Secret updated successfully - requeue only if no version is specified
 	return reconcileResult, nil
 }
 
-func (r *VaultSecretReconciler) updateConditions(ctx context.Context, log logr.Logger, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {
+func (r *VaultSecretReconciler) updateConditions(ctx context.Context, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {
 	instance.Status.Conditions = []metav1.Condition{{
 		Type:               conditionTypeSecretCreated,
 		Status:             status,
@@ -226,7 +225,7 @@ func (r *VaultSecretReconciler) updateConditions(ctx context.Context, log logr.L
 
 	err := r.Status().Update(ctx, instance)
 	if err != nil {
-		log.Error(err, "Could not update status")
+		logr.FromContext(ctx).Error(err, "Could not update status")
 	}
 }
 

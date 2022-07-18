@@ -42,7 +42,7 @@ func main() {
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	opts := zap.Options{
-		Development: false,
+		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
@@ -99,7 +99,6 @@ func main() {
 
 	if err = (&controllers.VaultSecretReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("VaultSecret"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VaultSecret")
@@ -107,7 +106,7 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
-	err = mgr.AddHealthzCheck("healthz", func(req *http.Request) error {
+	err = mgr.AddHealthzCheck("healthz", func(_ *http.Request) error {
 		if vault.SharedClient == nil {
 			return nil
 		}
@@ -119,7 +118,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = mgr.AddReadyzCheck("readyz", func(req *http.Request) error {
+	err = mgr.AddReadyzCheck("readyz", func(_ *http.Request) error {
 		if vault.SharedClient == nil {
 			return nil
 		}
