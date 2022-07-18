@@ -1,10 +1,10 @@
 <div align="center">
-  <img src="./assets/logo.png" width="20%" />
+  <img src="./assets/logo.png?" width="20%" />
   <br><br>
 
   Create Kubernetes secrets from Vault for a secure GitOps based workflow.
 
-  <img src="./assets/gitops.png" width="100%" />
+  <img src="./assets/gitops.png?" width="100%" />
 </div>
 
 The **Vault Secrets Operator** creates Kubernetes secrets from Vault. The idea behind the Vault Secrets Operator is to manage secrets in Kubernetes cluster using a secure GitOps based workflow. For more information about a secure GitOps based workflow I recommend the article ["Managing Secrets in Kubernetes"](https://www.weave.works/blog/managing-secrets-in-kubernetes) from [Weaveworks](https://www.weave.works). With the help of the Vault Secrets Operator you can commit your secrets to your git repository using a custom resource. If you apply these secrets to your Kubernetes cluster the Operator will lookup the real secret in Vault and creates the corresponding Kubernetes secret. If you are using something like [Sealed Secrets](http://github.com/bitnami-labs/sealed-secrets) for this workflow the Vault Secrets Operator can be used as replacement for this.
@@ -693,8 +693,7 @@ export VAULT_RECONCILIATION_TIME=180
 Deploy the CRD and run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
 
 ```sh
-kubectl apply -f config/crd/bases/ricoberger.de_vaultsecrets.yaml
-make run ENABLE_WEBHOOKS=false
+make install run
 ```
 
 ### Minikube
@@ -723,7 +722,7 @@ Deploy the Helm chart:
 helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="$VAULT_ADDRESS" --set image.repository="ricoberger/vault-secrets-operator" --set image.tag="dev"
 ```
 
-For an example using [kind](https://kind.sigs.k8s.io) you can take a look at the `testbin/setup-kind.sh` file.
+For an example using [kind](https://kind.sigs.k8s.io) you can take a look at the `hack/setup-kind.sh` file.
 
 ## Links
 
