@@ -7,32 +7,34 @@ on:
 
 jobs:
   build-release:
-    name: Release Helm Chart
-    runs-on: ubuntu-latest
+    name: Helm Chart
+    runs-on: ubuntu-20.04
     steps:
-    - name: Set up Go 1.13
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.13
-      id: go
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v1
+      - name: Lint
+        run: |
+          helm lint ./charts/vault-secrets-operator
 
-    - name: Configure git
-      run: git config --global user.email "mail@ricoberger.de" && git config --global user.name "ricoberger"
+      - name: Template
+        run: |
+          helm template vault-secrets-operator -n vault-secrets-operator ./charts/vault-secrets-operator
 
-    - name: Package Helm chart
-      run: helm package ./charts/vault-secrets-operator
+      - name: Configure Git
+        run: git config --global user.email "mail@ricoberger.de" && git config --global user.name "ricoberger"
 
-    - name: Clone Helm repository
-      run: git clone https://github.com/ricoberger/helm-charts.git
+      - name: Package Helm Chart
+        run: helm package ./charts/vault-secrets-operator
 
-    - name: Update Helm repository
-      run: mv vault-secrets-operator* ./helm-charts/ && helm repo index helm-charts/ --url https://ricoberger.github.io/helm-charts/
+      - name: Clone Helm Repository
+        run: git clone https://github.com/ricoberger/helm-charts.git
 
-    - name: Commit changes
-      run: cd helm-charts/ && git add . && git commit -m "Add new release for Vault Secrets Operator"
+      - name: Update Helm Repository
+        run: mv vault-secrets-operator* ./helm-charts/ && helm repo index helm-charts/ --url https://ricoberger.github.io/helm-charts/
 
-    - name: Push changes
-      run: cd helm-charts/ && git push https://ricoberger:${{ secrets.TOKEN }}@github.com/ricoberger/helm-charts.git
+      - name: Commit Changes
+        run: cd helm-charts/ && git add . && git commit -m "Add new release for Vault Secrets Operator"
+
+      - name: Push Changes
+        run: cd helm-charts/ && git push https://ricoberger:${{ secrets.TOKEN }}@github.com/ricoberger/helm-charts.git
