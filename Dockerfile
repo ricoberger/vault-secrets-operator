@@ -5,8 +5,8 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -a -o manager main.go
 
-FROM alpine:3.16.0
-RUN apk update && apk add --no-cache ca-certificates
+FROM alpine:3.16.1
+RUN apk update && apk add --no-cache ca-certificates && apk upgrade busybox --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER nobody
