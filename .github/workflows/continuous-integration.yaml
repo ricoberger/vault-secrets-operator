@@ -41,6 +41,6 @@ jobs:
         if: ${{ always() }}
         run: |
           kubectl get pods --namespace vault
-          kubectl  logs --namespace=vault vault-0
+          kubectl logs --namespace=vault vault-0
           kubectl get pods --namespace vault-secrets-operator
-          kubectl  logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
+          kubectl logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
