@@ -4,6 +4,8 @@ deploymentStrategy: {}
 image:
   repository: ricoberger/vault-secrets-operator
   tag: 1.19.1
+  # digest: sha256:7246830da1852a7417cccc1092beecdf524d9eb9fb7b29aabcf10796cccb3def
+
   pullPolicy: IfNotPresent
   volumeMounts: []
     # - name: ca
