@@ -92,6 +92,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultGcpPath := os.Getenv("VAULT_GCP_PATH")
 	vaultGcpAuthType := os.Getenv("VAULT_GCP_AUTH_TYPE")
 	vaultGcpRole := os.Getenv("VAULT_GCP_ROLE")
+	vaultGcpServiceAccountEmail := os.Getenv("VAULT_GCP_SERVICE_ACCOUNT_EMAIL")
 	vaultTokenMaxTTL := os.Getenv("VAULT_TOKEN_MAX_TTL")
 	vaultNamespace := os.Getenv("VAULT_NAMESPACE")
 	vaultPKIRenew := os.Getenv("VAULT_PKI_RENEW")
@@ -616,16 +617,18 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 					return nil, fmt.Errorf("could not create IAM client: %w", err)
 				}
 
-				metadataClient := gcpmetadata.NewClient(nil)
-				serviceAccountEmail, err := metadataClient.Email("default")
-				if err != nil {
-					return nil, fmt.Errorf("could not obtain service account from credentials; a service account to authenticate as must be provided")
+				if vaultGcpServiceAccountEmail == "" {
+					metadataClient := gcpmetadata.NewClient(nil)
+					vaultGcpServiceAccountEmail, err = metadataClient.Email("default")
+					if err != nil {
+						return nil, fmt.Errorf("could not obtain service account from credentials; a service account to authenticate as must be provided")
+					}
 				}
 
 				ttl := time.Minute * time.Duration(15)
 				jwtPayload := map[string]interface{}{
 					"aud": fmt.Sprintf("vault/%s", vaultGcpRole),
-					"sub": serviceAccountEmail,
+					"sub": vaultGcpServiceAccountEmail,
 					"exp": time.Now().Add(ttl).Unix(),
 				}
 
@@ -634,7 +637,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 					return nil, fmt.Errorf("could not convert JWT payload to JSON string: %w", err)
 				}
 
-				resourceName := fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail)
+				resourceName := fmt.Sprintf("projects/-/serviceAccounts/%s", vaultGcpServiceAccountEmail)
 				req := &gcpcredentialspb.SignJwtRequest{
 					Name:    resourceName,
 					Payload: string(payloadBytes),
