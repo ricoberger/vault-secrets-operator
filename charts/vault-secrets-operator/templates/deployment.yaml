@@ -93,6 +93,8 @@ spec:
               value: {{ .Values.vault.gcpPath | quote }}
             - name: VAULT_GCP_AUTH_TYPE
               value: {{ .Values.vault.gcpAuthType | quote }}
+            - name: VAULT_GCP_SERVICE_ACCOUNT_EMAIL
+              value: {{ .Values.vault.gcpServiceAccountEmail | quote }}
             - name: VAULT_GCP_ROLE
               value: {{ .Values.vault.gcpRole | quote }}
 

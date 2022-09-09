@@ -91,6 +91,7 @@ vault:
   awsAuthType: iam
   awsRole: vault-secrets-operator
   gcpPath: auth/gcp
+  gcpServiceAccountEmail: ""
   gcpAuthType: iam
   gcpRole: vault-secrets-operator
   reconciliationTime: 0
