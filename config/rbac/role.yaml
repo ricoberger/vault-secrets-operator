@@ -8,7 +8,7 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - leases
+  - configmaps
   verbs:
   - create
   - delete
