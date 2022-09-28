@@ -1,10 +1,10 @@
 apiVersion: v1
-appVersion: 1.17.0
+appVersion: 1.19.6
 description: Create Kubernetes secrets from Vault for a secure GitOps based workflow.
 home: https://github.com/ricoberger/vault-secrets-operator
-icon: https://raw.githubusercontent.com/ricoberger/vault-secrets-operator/master/assets/logo.png
+icon: https://raw.githubusercontent.com/ricoberger/vault-secrets-operator/main/assets/logo.png
 maintainers:
   - name: Rico Berger
     url: https://ricoberger.de
 name: vault-secrets-operator
-version: 1.17.0
+version: 1.19.6
