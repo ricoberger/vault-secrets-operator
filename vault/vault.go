@@ -22,7 +22,7 @@ import (
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/vault/api"
-	"github.com/leosayous21/go-azure-msi/msi"
+	"github.com/padoa/go-azure-msi/msi"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
@@ -97,6 +97,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultNamespace := os.Getenv("VAULT_NAMESPACE")
 	vaultPKIRenew := os.Getenv("VAULT_PKI_RENEW")
 	vaultDatabaseRenew := os.Getenv("VAULT_DATABASE_RENEW")
+	vaultAzureMsiObjectID := os.Getenv("AZURE_MSI_OBJECT_ID")
 
 	// Create new Vault configuration. This configuration is used to create the
 	// API client. We set the timeout of the HTTP client to 10 seconds.
@@ -346,7 +347,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		// Read the service account token value and create a map for the
 		// authentication against Vault.
-		msiToken, err := msi.GetMsiToken()
+		msiToken, err := msi.GetMsiToken(vaultAzureMsiObjectID)
 		if err != nil {
 			return nil, err
 		}
