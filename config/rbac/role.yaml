@@ -1,4 +1,3 @@
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -7,9 +6,9 @@ metadata:
   name: vault-secrets-operator
 rules:
 - apiGroups:
-  - ""
+  - coordination.k8s.io
   resources:
-  - configmaps
+  - leases
   verbs:
   - create
   - delete
@@ -19,9 +18,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - coordination.k8s.io
+  - ""
   resources:
-  - leases
+  - configmaps
   verbs:
   - create
   - delete

@@ -6,20 +6,7 @@ import (
 	"time"
 )
 
-func convertData(data map[string]interface{}) map[string][]byte {
-	return map[string][]byte{
-		"certificate":      []byte(data["certificate"].(string)),
-		"expiration":       []byte(data["expiration"].(json.Number).String()),
-		"issuing_ca":       []byte(data["issuing_ca"].(string)),
-		"private_key":      []byte(data["private_key"].(string)),
-		"private_key_type": []byte(data["private_key_type"].(string)),
-		"serial_number":    []byte(data["serial_number"].(string)),
-	}
-}
-
 func (c *Client) GetCertificate(path string, role string, options map[string]string) (map[string][]byte, *time.Time, error) {
-	log.Info(fmt.Sprintf("Get certificate %s", ""))
-
 	optionsI := make(map[string]interface{}, len(options))
 	for k, v := range options {
 		optionsI[k] = v
@@ -40,5 +27,17 @@ func (c *Client) GetCertificate(path string, role string, options map[string]str
 	}
 	expiration := time.Unix(exp, 0)
 
-	return convertData(r.Data), &expiration, nil
+	data, err := convertData(r.Data, []string{
+		"certificate",
+		"expiration",
+		"issuing_ca",
+		"private_key",
+		"private_key_type",
+		"serial_number",
+	}, false)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return data, &expiration, nil
 }

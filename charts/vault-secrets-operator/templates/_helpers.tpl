@@ -95,3 +95,14 @@ Additional containers to add to the deployment
 */}}
 {{- define "vault-secrets-operator.additionalContainers" -}}
 {{- end -}}
+
+{{/*
+Helper function for checking if a property is defined
+*/}}
+{{- define "vault-secrets-operator.imageRef" -}}
+{{- if .Values.image.digest -}}
+    @{{ .Values.image.digest }}
+{{- else -}}
+    :{{ .Values.image.tag }}
+{{- end -}}
+{{- end -}}

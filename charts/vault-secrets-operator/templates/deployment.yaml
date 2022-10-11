@@ -38,7 +38,7 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}{{ include "vault-secrets-operator.imageRef" . }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - /manager
@@ -93,6 +93,8 @@ spec:
               value: {{ .Values.vault.gcpPath | quote }}
             - name: VAULT_GCP_AUTH_TYPE
               value: {{ .Values.vault.gcpAuthType | quote }}
+            - name: VAULT_GCP_SERVICE_ACCOUNT_EMAIL
+              value: {{ .Values.vault.gcpServiceAccountEmail | quote }}
             - name: VAULT_GCP_ROLE
               value: {{ .Values.vault.gcpRole | quote }}
 
@@ -135,6 +137,10 @@ spec:
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: 
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- if .Values.priorityClassName }}

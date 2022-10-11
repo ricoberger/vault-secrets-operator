@@ -11,7 +11,7 @@ kubectl create ns vault-secrets-operator
 
 # Install Vault in the cluster and create a new secret engine for the operator
 helm repo add hashicorp https://helm.releases.hashicorp.com
-helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.19.0 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.9.3"
+helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.21.0 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.11.2"
 
 sleep 10s
 kubectl wait pod/vault-0 --namespace=vault  --for=condition=Ready --timeout=180s
@@ -27,7 +27,7 @@ path "kvv2/data/*" {
 EOF
 vault kv put kvv2/helloworld foo=bar
 
-helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="http://vault.vault.svc.cluster.local:8200" --set vault.authMethod="kubernetes" --set image.repository="localhost:5000/vault-secrets-operator" --set image.tag="test"
+helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="http://vault.vault.svc.cluster.local:8200" --set vault.authMethod="kubernetes" --set vault.kubernetesRole="" --set image.repository="localhost:5000/vault-secrets-operator" --set image.tag="test"
 
 export VAULT_SECRETS_OPERATOR_NAMESPACE=$(kubectl get sa --namespace=vault-secrets-operator vault-secrets-operator -o jsonpath="{.metadata.namespace}")
 export VAULT_SECRET_NAME=$(kubectl get sa --namespace=vault-secrets-operator vault-secrets-operator -o jsonpath="{.secrets[*]['name']}")
@@ -45,6 +45,7 @@ kind: VaultSecret
 metadata:
   name: helloworld
 spec:
+  vaultRole: vault-secrets-operator
   path: kvv2/helloworld
   type: Opaque
 EOF
