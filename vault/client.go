@@ -3,6 +3,7 @@ package vault
 import (
 	b64 "encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -79,16 +80,16 @@ func (c *Client) RenewToken() {
 			continue
 		}
 
-		log.Info("Renew Vault token")
-		_, err := c.client.Auth().Token().RenewSelf(c.tokenLeaseDuration)
-		if err != nil {
-			log.Error(err, "Could not renew token")
-			c.failedRenewTokenAttempts = c.failedRenewTokenAttempts + 1
-			time.Sleep(time.Duration(c.tokenRenewalRetryInterval) * time.Second)
-		} else {
-			c.failedRenewTokenAttempts = 0
-			time.Sleep(time.Duration(c.tokenRenewalInterval) * time.Second)
-		}
+		//log.Info("Renew Vault token")
+		//_, err := c.client.Auth().Token().RenewSelf(c.tokenLeaseDuration)
+		//if err != nil {
+		//	log.Error(err, "Could not renew token")
+		//	c.failedRenewTokenAttempts = c.failedRenewTokenAttempts + 1
+		//	time.Sleep(time.Duration(c.tokenRenewalRetryInterval) * time.Second)
+		//} else {
+		//	c.failedRenewTokenAttempts = 0
+		//	time.Sleep(time.Duration(c.tokenRenewalInterval) * time.Second)
+		//}
 	}
 }
 
@@ -257,5 +258,5 @@ func (c *Client) addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 }
 
 func (c *Client) GetPKIRenew() time.Duration {
-	return c.pkiRenew
+	return c.PKIRenew
 }

@@ -71,8 +71,6 @@ type VaultSecretSpec struct {
 // VaultSecretStatus defines the observed state of VaultSecret
 type VaultSecretStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	Expires    bool               `json:"expires,omitempty"`
-	ExpiresAt  string             `json:"expiresAt,omitempty"`
 }
 
 // +kubebuilder:object:root=true

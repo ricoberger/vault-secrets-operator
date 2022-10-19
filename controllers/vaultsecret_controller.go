@@ -82,7 +82,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Get secret from Vault.
-	// If the VaultSecret contains the vaulRole property we are creating a new client with the specified Vault Role to
+	// If the VaultSecret contains the vaultRole property we are creating a new client with the specified Vault Role to
 	// get the secret.
 	// When the property isn't set we are using the shared client. It is also possible that the shared client is nil, so
 	// that we have to check for this first. This could happen since we do not return an error when we initializing the
@@ -125,7 +125,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		data, err = vaultClient.KVRenderData(secret, instance.Spec.Keys, instance.Spec.IsBinary)
 		if err != nil {
 			log.Error(err, "Could not render secret data")
-			r.updateConditions(ctx, log, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 	} else if instance.Spec.SecretEngine == ricobergerdev1alpha1.PKIEngine {
@@ -150,22 +150,11 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		// Requeue before expiration
-		log.Info(fmt.Sprintf("Certificate will expire on %s", expiration.String()))
-		ra := expiration.Sub(time.Now()) - vaultClient.GetPKIRenew()
-		if ra <= 0 {
-			reconcileResult.Requeue = true
-		} else {
-			reconcileResult.RequeueAfter = ra
-			log.Info(fmt.Sprintf("Certificate will be renewed on %s", time.Now().Add(ra).String()))
-
-		}
-
 		requeueAfter = expiresAt.Sub(time.Now()) - vaultClient.PKIRenew
 	} else if instance.Spec.SecretEngine == ricobergerdev1alpha1.DatabaseEngine {
 		if err := ValidateDatabase(instance); err != nil {
 			log.Error(err, "Resource validation failed")
-			r.updateConditions(ctx, log, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
@@ -173,14 +162,14 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		secret, expiresAt, err = vaultClient.GetDatabaseCreds(instance.Spec.Path, instance.Spec.Role)
 		if err != nil {
 			log.Error(err, "Could not get database credentials from vault")
-			r.updateConditions(ctx, log, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
 		data, err = vaultClient.DatabaseRenderData(secret)
 		if err != nil {
 			log.Error(err, "Could not render database data")
-			r.updateConditions(ctx, log, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
@@ -188,8 +177,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if expiresAt != nil {
-		r.updateExpiration(ctx, log, instance, expiresAt)
-		reconcileResult.RequeueAfter = requeueAfter
+		r.updateExpiration(ctx, instance, expiresAt)
+		reconcileResult.RequeueAfter = expiresAt.Sub(time.Now())
 		log.Info(fmt.Sprintf("Secret %s will expire on %s", instance.Name, expiresAt.String()))
 		log.Info(fmt.Sprintf("Secret %s will be renewed on %s", instance.Name, time.Now().Add(requeueAfter).String()))
 	}
@@ -258,9 +247,10 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return reconcileResult, nil
 }
 
-func (r *VaultSecretReconciler) updateExpiration(ctx context.Context, log logr.Logger, instance *ricobergerdev1alpha1.VaultSecret, expiresAt *time.Time) {
-	instance.Status.Expires = true
-	instance.Status.ExpiresAt = expiresAt.String()
+func (r *VaultSecretReconciler) updateExpiration(ctx context.Context, instance *ricobergerdev1alpha1.VaultSecret, expiresAt *time.Time) {
+	return
+	//instance.Status.Expires = true
+	//instance.Status.ExpiresAt = expiresAt.String()
 
 	//err := r.Status().Update(ctx, instance)
 	//if err != nil {
@@ -269,6 +259,8 @@ func (r *VaultSecretReconciler) updateExpiration(ctx context.Context, log logr.L
 }
 
 func (r *VaultSecretReconciler) updateConditions(ctx context.Context, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {
+	//instance.Status.Expires = true
+	//instance.Status.ExpiresAt = time.Now().Add(time.Second * 30).String()
 	instance.Status.Conditions = []metav1.Condition{{
 		Type:               conditionTypeSecretCreated,
 		Status:             status,

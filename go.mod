@@ -11,6 +11,7 @@ require (
 	github.com/leosayous21/go-azure-msi v0.0.0-20210509193526-19353bedcfc8
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.20.2
+	github.com/padoa/go-azure-msi v0.0.0-20221011081542-68bfb6bdacaf
 	github.com/pkg/errors v0.9.1
 	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1
 	google.golang.org/api v0.96.0
