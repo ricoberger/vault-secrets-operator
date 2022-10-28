@@ -7,7 +7,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
 	"github.com/ricoberger/vault-secrets-operator/controllers"
@@ -21,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
-	_ "net/http/pprof"
 )
 
 var (
@@ -131,12 +129,6 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-
-	var wg sync.WaitGroup
-	go func() {
-		fmt.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
-	wg.Add(1)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
