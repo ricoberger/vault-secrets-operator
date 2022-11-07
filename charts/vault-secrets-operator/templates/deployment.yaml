@@ -49,7 +49,11 @@ spec:
           env:
             - name: WATCH_NAMESPACE
             {{- if .Values.vault.namespaces }}
+              {{- if kindIs "slice" .Values.vault.namespaces }}
+              value: {{ .Values.vault.namespaces | join "," | quote }}
+              {{- else }}
               value: {{ .Values.vault.namespaces | quote }}
+              {{- end -}}
             {{- else if .Values.rbac.namespaced }}
               value: {{ .Release.Namespace | quote }}
             {{- else }}
