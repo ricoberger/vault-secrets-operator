@@ -5,7 +5,7 @@ on: pull_request
 jobs:
   kubernetes:
     name: Kubernetes
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         deployment:
@@ -47,7 +47,7 @@ jobs:
 
   go:
     name: Go
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
