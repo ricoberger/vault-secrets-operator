@@ -175,7 +175,7 @@ When you deploy the Vault Secrets Operator via Helm chart you have to set the `v
 vault:
   authMethod: approle
 ```
-
+Set `VAULT_TOKEN_MAX_TTL` (default: 16 days) same or lower than the `token_max_ttl` of the AppRole (Vault default: 32 days) to ensure reauthentication in time.  
 Mounting the vault ROLE_ID and SECRET_ID secrets as volumes is supported.  It requires `image.volumeMounts` to be populated, `VAULT_ROLE_ID_PATH` and `VAULT_SECRET_ID_PATH` to be set in `environmentVars`(or `export` as shell variables), and `volumes` to be populated.  See example below:
 
 NOTE: `image.volumeMounts[].mountPath` must match `environmentVars[].value` for the respective ROLE_ID or SECRET_ID.  Reference [Kubernetes: Using Secrets as files from a Pod](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod)
