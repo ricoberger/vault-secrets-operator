@@ -9,6 +9,7 @@ import (
 	"time"
 
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
+	"github.com/ricoberger/vault-secrets-operator/controllers/metrics"
 	"github.com/ricoberger/vault-secrets-operator/vault"
 
 	"github.com/Masterminds/sprig"
@@ -25,14 +26,14 @@ import (
 )
 
 const (
-	conditionTypeSecretCreated  = "SecretCreated"
-	conditionReasonFetchFailed  = "FetchFailed"
-	conditionReasonCreated      = "Created"
-	conditionReasonCreateFailed = "CreateFailed"
-	conditionReasonUpdated      = "Updated"
-	conditionReasonUpdateFailed = "UpdateFailed"
-	conditionReasonMergeFailed  = "MergeFailed"
-	conditionInvalidResource    = "InvalidResource"
+	conditionTypeSecretCreated     = "SecretCreated"
+	conditionReasonFetchFailed     = "FetchFailed"
+	conditionReasonCreated         = "Created"
+	conditionReasonCreateFailed    = "CreateFailed"
+	conditionReasonUpdated         = "Updated"
+	conditionReasonUpdateFailed    = "UpdateFailed"
+	conditionReasonMergeFailed     = "MergeFailed"
+	conditionReasonInvalidResource = "InvalidResource"
 )
 
 const (
@@ -126,7 +127,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	} else if instance.Spec.SecretEngine == pkiEngine {
 		if err := ValidatePKI(instance); err != nil {
 			log.Error(err, "Resource validation failed")
-			r.updateConditions(ctx, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonInvalidResource, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
@@ -215,6 +216,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 func (r *VaultSecretReconciler) updateConditions(ctx context.Context, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {
+	metrics.VaultSecretsReconciliationsTotal.WithLabelValues(instance.Namespace, instance.Name, string(status)).Inc()
+
 	instance.Status.Conditions = []metav1.Condition{{
 		Type:               conditionTypeSecretCreated,
 		Status:             status,
