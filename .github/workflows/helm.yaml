@@ -2,39 +2,44 @@ name: Helm
 
 on:
   push:
-    tags:
-      - '*'
+    paths:
+      - 'charts/vault-secrets-operator/**'
 
 jobs:
   build-release:
     name: Helm Chart
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code into the Go module directory
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Lint
         run: |
-          helm lint ./charts/vault-secrets-operator
+          helm lint charts/vault-secrets-operator
 
       - name: Template
         run: |
-          helm template vault-secrets-operator -n vault-secrets-operator ./charts/vault-secrets-operator
+          helm template vault-secrets-operator -n vault-secrets-operator charts/vault-secrets-operator
 
-      - name: Configure Git
+      - name: Configure git
         run: git config --global user.email "mail@ricoberger.de" && git config --global user.name "ricoberger"
 
       - name: Package Helm Chart
-        run: helm package ./charts/vault-secrets-operator
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: helm package charts/vault-secrets-operator
 
       - name: Clone Helm Repository
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: git clone https://github.com/ricoberger/helm-charts.git
 
       - name: Update Helm Repository
-        run: mv vault-secrets-operator* ./helm-charts/ && helm repo index helm-charts/ --url https://ricoberger.github.io/helm-charts/
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: mv vault-secrets-operator* helm-charts/ && helm repo index helm-charts/ --url https://ricoberger.github.io/helm-charts/
 
       - name: Commit Changes
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: cd helm-charts/ && git add . && git commit -m "Add new release for Vault Secrets Operator"
 
       - name: Push Changes
+        if: ${{ github.ref == 'refs/heads/main' }}
         run: cd helm-charts/ && git push https://ricoberger:${{ secrets.TOKEN }}@github.com/ricoberger/helm-charts.git
