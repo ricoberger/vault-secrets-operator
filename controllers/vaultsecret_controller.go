@@ -217,6 +217,11 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 func (r *VaultSecretReconciler) updateConditions(ctx context.Context, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {
 	metrics.VaultSecretsReconciliationsTotal.WithLabelValues(instance.Namespace, instance.Name, string(status)).Inc()
+	if status == metav1.ConditionTrue {
+		metrics.VaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(1)
+	} else {
+		metrics.VaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(0)
+	}
 
 	instance.Status.Conditions = []metav1.Condition{{
 		Type:               conditionTypeSecretCreated,

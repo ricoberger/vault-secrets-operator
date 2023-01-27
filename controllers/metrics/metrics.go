@@ -13,9 +13,17 @@ var (
 		},
 		[]string{"namespace", "name", "status"},
 	)
+	VaultSecretsReconciliationStatus = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "vaultsecrets_reconciliation_status",
+			Help: "Reconciliation status (0 = failed and 1 = ok)",
+		},
+		[]string{"namespace", "name"},
+	)
 )
 
 func init() {
 	// Register custom metrics with the global prometheus registry
 	metrics.Registry.MustRegister(VaultSecretsReconciliationsTotal)
+	metrics.Registry.MustRegister(VaultSecretsReconciliationStatus)
 }
