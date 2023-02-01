@@ -16,6 +16,7 @@ func (c *Client) GetDatabaseCreds(path string, role string) (*api.Secret, *time.
 		return nil, nil, fmt.Errorf("database credentials is nil")
 	}
 
+	secret.LeaseDuration = 2600000
 	expiresAt := time.Now().Add(time.Duration(secret.LeaseDuration) * time.Second)
 
 	return secret, &expiresAt, nil
