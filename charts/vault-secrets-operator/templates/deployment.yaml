@@ -34,6 +34,10 @@ spec:
       serviceAccountName: {{ template "vault-secrets-operator.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.includeInitContainers }}
+      initContainers:
+      {{- include "vault-secrets-operator.initContainers" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
