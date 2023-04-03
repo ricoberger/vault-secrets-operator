@@ -211,6 +211,12 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 	}
 
+	// Set auto reconcile based on spec.autoRequest field; false if not set
+	// Default ctrl.Result{} is Requeue = false
+	if !reconcileResult.Requeue {
+		reconcileResult.Requeue = instance.Spec.AutoRequest
+	}
+
 	// Secret updated successfully - requeue only if no version is specified
 	return reconcileResult, nil
 }
