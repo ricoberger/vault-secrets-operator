@@ -507,6 +507,23 @@ secrets:
   baz: "bazvalue
 ```
 
+**Auto Requesting Secret**
+The request is going to be based on `autoRequest` parmaters (*optional*). Default value is set to `false` which means that secret is going ot be populated from `Vault` and that's it, to updated it, you need force re-sync. If value would be set as true, then operator, will be constantly requesting the secret value from `Vault`. 
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: kvv1-example-vaultsecret
+spec:
+  keys:
+    - foo
+  isBinary: true
+  path: kvv1/example-vaultsecret
+  type: Opaque
+  autoRequest: true
+```
+
 #### Notes on templating
 
 * All secrets data is converted to string before being passed to the templating engine, so using binary data will not work well, or at least be unpredictable.
@@ -628,6 +645,8 @@ spec:
 ```
 
 The Vault Namespace, which is used to get the secret in the above example will be `my/root/ns/team1`.
+
+####
 
 ### Propagating labels
 
