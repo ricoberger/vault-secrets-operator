@@ -56,6 +56,10 @@ type VaultSecretSpec struct {
 	// get double encoded. This flag will skip the base64 encode which is needed
 	// for string data to avoid the double encode problem.
 	IsBinary bool `json:"isBinary,omitempty"`
+	// autoRequest is a flag that indicates to keep requesing secret
+	// continiously from Vault to automatically fetch secret if new version
+	// was publised.
+	AutoRequest bool `json:"autoRequest,omitempty"`
 }
 
 // VaultSecretStatus defines the observed state of VaultSecret
