@@ -7,4 +7,4 @@ maintainers:
   - name: Rico Berger
     url: https://ricoberger.de
 name: vault-secrets-operator
-version: 2.2.0
+version: 2.3.0

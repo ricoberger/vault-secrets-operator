@@ -52,3 +52,5 @@
 | `serviceMonitor.honorLabels` | Honor labels option. | `true` |
 | `serviceMonitor.relabelings` | Additional relabeling config for the ServiceMonitor. | `[]` |
 | `priorityClassName` | Optionally attach priority class to pod spec. | `null` |
+| `dnsConfig` | Optionally attach dnsConfig to pod spec and test pod spec. | `null` |
+| `dnsPolicy` | Optionally specify the dnsPolicy in pod spec and test pod spec. | `null` |
