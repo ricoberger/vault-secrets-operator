@@ -125,13 +125,11 @@ vault write auth/kubernetes/role/vault-secrets-operator \
   policies=vault-secrets-operator \
   ttl=24h
 
-# If you're running Vault inside kubernetes, you can alternatively exec into any Vault pod and run this...
-# In some bare-metal k8s setups this method is necessary.
+# If you're running Vault inside Kubernetes, you can alternatively exec into any Vault pod and run this...
+# In modern versions of vault, the token / host / CA cert will be fetched automatically.
+# https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/121#issuecomment-1046949951
 # vault write auth/kubernetes/config \
-#   issuer="https://kubernetes.default.svc.cluster.local" \
-#   token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-#   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
-#   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+#   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443
 ```
 
 When you deploy the Vault Secrets Operator via Helm chart you have to set the `vault.authMethod` property to `kubernetes` in the `values.yaml` file, to use the Kubernetes auth method instead of the default Token auth methods.
