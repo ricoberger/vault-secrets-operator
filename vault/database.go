@@ -31,10 +31,12 @@ func (c *Client) getDatabaseUrl(path string, dbName string) (string, error) {
 // extractHostPort takes a connectionUrl received from Vault and returns its host and port
 // We assume that port is always set.
 func extractHostPort(connectionUrl string) (string, string, error) {
+	// The connectionUrl looks like postgres://{{username}}:{{password}}@host:5432/database
+	// We replace the {{var}} by PLACEHOLDER so that url.Parse does not crash
 	re := regexp.MustCompile(`{{[^}}]+}}`)
-	s := re.ReplaceAll([]byte(connectionUrl), []byte("T"))
+	s := re.ReplaceAllString(connectionUrl, "PLACEHOLDER")
 
-	u, err := url.Parse(string(s))
+	u, err := url.Parse(s)
 	if err != nil {
 		return "", "", err
 	}
@@ -42,8 +44,9 @@ func extractHostPort(connectionUrl string) (string, string, error) {
 	return net.SplitHostPort(u.Host)
 }
 
-// Get username/password/host/port for a Vault Database role
+// GetDatabaseCreds returns username/password/host/port for a Vault Database role
 // Host and port are extracted from the configuration of the database
+// Username and Password are generated using the creds endpoint
 func (c *Client) GetDatabaseCreds(path string, role string) (*api.Secret, *time.Time, error) {
 	secret, err := c.client.Logical().ReadWithData(path+"/creds/"+role, map[string][]string{})
 	if err != nil {
