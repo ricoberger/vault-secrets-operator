@@ -105,6 +105,7 @@ rbac:
 serviceAccount:
   create: true
   name: vault-secrets-operator
+  createSecret: true
 
 # Annotations for vault-secrets-operator pod(s).
 podAnnotations: {}
