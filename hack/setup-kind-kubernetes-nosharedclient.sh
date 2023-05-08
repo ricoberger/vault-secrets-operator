@@ -29,8 +29,8 @@ vault kv put kvv2/helloworld foo=bar
 
 helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="http://vault.vault.svc.cluster.local:8200" --set vault.authMethod="kubernetes" --set vault.kubernetesRole="" --set image.repository="localhost:5000/vault-secrets-operator" --set image.tag="test"
 
-export VAULT_SECRETS_OPERATOR_NAMESPACE=$(kubectl get sa --namespace=vault-secrets-operator vault-secrets-operator -o jsonpath="{.metadata.namespace}")
-export VAULT_SECRET_NAME=$(kubectl get sa --namespace=vault-secrets-operator vault-secrets-operator -o jsonpath="{.secrets[*]['name']}")
+export VAULT_SECRETS_OPERATOR_NAMESPACE=vault-secrets-operator
+export VAULT_SECRET_NAME=vault-secrets-operator
 export SA_JWT_TOKEN=$(kubectl get secret --namespace=vault-secrets-operator $VAULT_SECRET_NAME -o jsonpath="{.data.token}" | base64 --decode; echo)
 export SA_CA_CRT=$(kubectl get secret --namespace=vault-secrets-operator $VAULT_SECRET_NAME -o jsonpath="{.data['ca\.crt']}" | base64 --decode; echo)
 export K8S_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')

@@ -93,7 +93,7 @@ The recommended way to authenticate is the Kubernetes auth method, which require
 
 ```sh
 export VAULT_SECRETS_OPERATOR_NAMESPACE=$(kubectl get sa vault-secrets-operator -o jsonpath="{.metadata.namespace}")
-export VAULT_SECRET_NAME=$(kubectl get sa vault-secrets-operator -o jsonpath="{.secrets[*]['name']}")
+export VAULT_SECRET_NAME=$(kubectl get secret vault-secrets-operator -o jsonpath="{.metadata.name}")
 export SA_JWT_TOKEN=$(kubectl get secret $VAULT_SECRET_NAME -o jsonpath="{.data.token}" | base64 --decode; echo)
 export SA_CA_CRT=$(kubectl get secret $VAULT_SECRET_NAME -o jsonpath="{.data['ca\.crt']}" | base64 --decode; echo)
 export K8S_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
@@ -173,7 +173,7 @@ When you deploy the Vault Secrets Operator via Helm chart you have to set the `v
 vault:
   authMethod: approle
 ```
-Set `VAULT_TOKEN_MAX_TTL` (default: 16 days) same or lower than the `token_max_ttl` of the AppRole (Vault default: 32 days) to ensure reauthentication in time.  
+Set `VAULT_TOKEN_MAX_TTL` (default: 16 days) same or lower than the `token_max_ttl` of the AppRole (Vault default: 32 days) to ensure reauthentication in time.
 Mounting the vault ROLE_ID and SECRET_ID secrets as volumes is supported.  It requires `image.volumeMounts` to be populated, `VAULT_ROLE_ID_PATH` and `VAULT_SECRET_ID_PATH` to be set in `environmentVars`(or `export` as shell variables), and `volumes` to be populated.  See example below:
 
 NOTE: `image.volumeMounts[].mountPath` must match `environmentVars[].value` for the respective ROLE_ID or SECRET_ID.  Reference [Kubernetes: Using Secrets as files from a Pod](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod)
