@@ -63,6 +63,8 @@ environmentVars:
       secretKeyRef:
         name: vault-secrets-operator
         key: VAULT_SECRET_ID
+serviceAccount:
+  createSecret: false
 EOF
 
 helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator -f ./values.yaml
