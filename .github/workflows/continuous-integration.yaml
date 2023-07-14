@@ -64,16 +64,6 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      - name: Cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - name: Download Dependencies
         run: |
           go mod download
