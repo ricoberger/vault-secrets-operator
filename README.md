@@ -143,7 +143,6 @@ vault:
 
 To use AppRole auth method for the authentication against the Vault API, you need to create a new AppRole.
 
-
 ```sh
 # Enable AppRole auth method:
 vault auth enable approle
@@ -160,6 +159,7 @@ vault write -f auth/approle/role/vault-secrets-operator/secret-id
 ```
 
 Use the following commands to set the environment variables for the activation of the AppRole auth method:
+
 ```shell
 export VAULT_AUTH_METHOD=approle
 export VAULT_ROLE_ID=
@@ -173,6 +173,7 @@ When you deploy the Vault Secrets Operator via Helm chart you have to set the `v
 vault:
   authMethod: approle
 ```
+
 Set `VAULT_TOKEN_MAX_TTL` (default: 16 days) same or lower than the `token_max_ttl` of the AppRole (Vault default: 32 days) to ensure reauthentication in time.
 Mounting the vault ROLE_ID and SECRET_ID secrets as volumes is supported.  It requires `image.volumeMounts` to be populated, `VAULT_ROLE_ID_PATH` and `VAULT_SECRET_ID_PATH` to be set in `environmentVars`(or `export` as shell variables), and `volumes` to be populated.  See example below:
 
@@ -211,6 +212,7 @@ volumes:
 
 You can use either ec2 or iam auth types on eks clusters to authenticate against the Vault API. [here](https://www.vaultproject.io/docs/auth/aws)
 Then you can enable the auth method with the following environment variables:
+
 ```shell
 export VAULT_AUTH_METHOD=aws
 export VAULT_AWS_PATH=auth/aws
@@ -224,6 +226,7 @@ If you deploy the Vault Secrets Operator via Helm you have to set the `vault.aut
 
 You can use the managed system identity provided on aks cluster to authenticate against the Vault API, to do that you will need to setup an auth backend as described [here](https://www.vaultproject.io/docs/auth/azure)
 Then you can setup the auth method with the following environment variables:
+
 ```shell
 export VAULT_AUTH_METHOD=azure
 export VAULT_AZURE_PATH=auth/azure
@@ -237,6 +240,7 @@ If you deploy the Vault Secrets Operator via Helm you have to set the `vault.aut
 
 You can use either gce or iam auth types on gke clusters to authenticate against the Vault API. [here](https://www.vaultproject.io/docs/auth/gcp)
 Then you can enable the auth method with the following environment variables:
+
 ```shell
 export VAULT_AUTH_METHOD=gcp
 export VAULT_GCP_PATH=auth/gcp
@@ -529,7 +533,7 @@ spec:
 ```
 
 You can pass any of the parameters supported by the PKI engine in `engineOptions`.
-A list is available here: https://www.vaultproject.io/api-docs/secret/pki#parameters-15
+A list is available here: [https://www.vaultproject.io/api-docs/secret/pki#parameters-15](https://www.vaultproject.io/api-docs/secret/pki#parameters-15)
 
 This will generate the following secret:
 
@@ -569,6 +573,7 @@ spec:
 ```
 
 The following fields are available:
+
 * `certificate`
 * `expiration`
 * `issuing_ca`
