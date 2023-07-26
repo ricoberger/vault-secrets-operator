@@ -24,11 +24,10 @@ jobs:
         id: tag
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
-            DOCKER_TAG="${GITHUB_REF:10}"
+            echo TAG=${GITHUB_REF:10} >> $GITHUB_ENV
           else
-            DOCKER_TAG="main"
+            echo TAG=main >> $GITHUB_ENV
           fi
-          echo ::set-output name=tag::${DOCKER_TAG}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -50,4 +49,4 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8
-          tags: ricoberger/vault-secrets-operator:${{ steps.tag.outputs.tag }}
+          tags: ricoberger/vault-secrets-operator:${{ env.TAG }}
