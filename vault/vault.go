@@ -116,11 +116,11 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	}
 
 	if len(vaultPKIRenew) == 0 {
-		vaultPKIRenew = "1h"
+		vaultPKIRenew = "72h"
 	}
 
 	if len(vaultDatabaseRenew) == 0 {
-		vaultDatabaseRenew = "24h"
+		vaultDatabaseRenew = "168h"
 	}
 
 	PKIRenew, err := time.ParseDuration(vaultPKIRenew)
