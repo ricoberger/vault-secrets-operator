@@ -87,11 +87,11 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Check if the VaultSecret instance is marked to be deleted, which is
-    // indicated by the deletion timestamp being set. The object will be deleted.
-    isVaultSecretMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
-    if isVaultSecretMarkedToBeDeleted {
-        return ctrl.Result{}, nil
-    }
+	// indicated by the deletion timestamp being set. The object will be deleted.
+	isVaultSecretMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isVaultSecretMarkedToBeDeleted {
+		return ctrl.Result{}, nil
+	}
 
 	// Get secret from Vault.
 	// If the VaultSecret contains the vaulRole property we are creating a new client with the specified Vault Role to

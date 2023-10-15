@@ -208,6 +208,35 @@ volumes:
           path: "id"
 ```
 
+### Username and Password
+
+To use username and password auth method for the authentication against the Vault API, you need to create a new user.
+
+```sh
+# Enable userpass auth method
+vault auth enable userpass
+
+# Create a user if not already created
+vault write auth/userpass/users/<username> password=<password> policies=<policies>
+```
+
+Use the following commands to set the environment variables for the activation of the UserPass auth method:
+
+```shell
+export VAULT_AUTH_METHOD=userpass
+export VAULT_USER=
+export VAULT_PASSWORD=
+export VAULT_TOKEN_MAX_TTL=120
+```
+
+When you deploy the Vault Secrets Operator via Helm chart you have to set the `vault.authMethod` property to `userpass`
+in the `values.yaml` file, to use the UserPass auth method instead of the default Token auth method.
+
+```yaml
+vault:
+  authMethod: userpass
+```
+
 ### AWS Auth Method
 
 You can use either ec2 or iam auth types on eks clusters to authenticate against the Vault API. [here](https://www.vaultproject.io/docs/auth/aws)

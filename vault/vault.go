@@ -74,6 +74,8 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultAddress := os.Getenv("VAULT_ADDRESS")
 	vaultHeader := os.Getenv("VAULT_HEADER")
 	vaultAuthMethod := os.Getenv("VAULT_AUTH_METHOD")
+	vaultUser := os.Getenv("VAULT_USER")
+	vaultPassword := os.Getenv("VAULT_PASSWORD")
 	vaultToken := os.Getenv("VAULT_TOKEN")
 	vaultTokenPath := os.Getenv("VAULT_TOKEN_PATH")
 	vaultTokenLeaseDuration := os.Getenv("VAULT_TOKEN_LEASE_DURATION")
@@ -311,6 +313,79 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				if err != nil {
 					c.tokenRenewalInterval = float64(c.tokenLeaseDuration) * 0.5
 				}
+				return nil
+			},
+			pkiRenew: pkiRenew,
+		}, nil
+	}
+
+	if vaultAuthMethod == "userpass" {
+		if vaultUser == "" {
+			return nil, fmt.Errorf("missing username for userpass auth method")
+		}
+		if vaultPassword == "" {
+			return nil, fmt.Errorf("missing password for userpass auth method")
+		}
+
+		data := make(map[string]interface{})
+		data["password"] = vaultPassword
+
+		userPassLoginPath := "auth/userpass/login/" + vaultUser
+		secret, err := apiClient.Logical().Write(userPassLoginPath, data)
+		if err != nil {
+			return nil, err
+		}
+		if secret.Auth == nil {
+			return nil, fmt.Errorf("missing authentication information")
+		}
+
+		tokenLeaseDuration := secret.Auth.LeaseDuration
+
+		tokenRenewalInterval, err := strconv.ParseFloat(vaultTokenRenewalInterval, 64)
+		if err != nil {
+			tokenRenewalInterval = float64(tokenLeaseDuration) * 0.5
+		}
+
+		tokenRenewalRetryInterval, err := strconv.ParseFloat(vaultTokenRenewalRetryInterval, 64)
+		if err != nil {
+			tokenRenewalRetryInterval = 30.0
+		}
+
+		tokenMaxTTL, err := strconv.Atoi(vaultTokenMaxTTL)
+		if err != nil {
+			// Vault default max TTL is 32 days, use 16 days as the reasonable default if
+			// VAULT_TOKEN_MAX_TTL not set.
+			// https://learn.hashicorp.com/tutorials/vault/tokens
+			tokenMaxTTL = 16 * 24 * 60 * 60
+		}
+
+		apiClient.SetToken(secret.Auth.ClientToken)
+
+		return &Client{
+			client:                    apiClient,
+			renewToken:                renewToken,
+			tokenLeaseDuration:        tokenLeaseDuration,
+			tokenRenewalInterval:      tokenRenewalInterval,
+			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
+			tokenMaxTTL:               tokenMaxTTL,
+			rootVaultNamespace:        vaultNamespace,
+			requestToken: func(c *Client) error {
+				secret, err := apiClient.Logical().Write(userPassLoginPath, data)
+				if err != nil {
+					return err
+				}
+				if secret.Auth == nil {
+					return fmt.Errorf("missing authentication information")
+				}
+
+				c.client.SetToken(secret.Auth.ClientToken)
+				// Update token lease duration and renewal interval
+				c.tokenLeaseDuration = secret.Auth.LeaseDuration
+				c.tokenRenewalInterval, err = strconv.ParseFloat(vaultTokenRenewalInterval, 64)
+				if err != nil {
+					c.tokenRenewalInterval = float64(c.tokenLeaseDuration) * 0.5
+				}
+
 				return nil
 			},
 			pkiRenew: pkiRenew,
