@@ -12,7 +12,7 @@ import (
 	"github.com/ricoberger/vault-secrets-operator/controllers/metrics"
 	"github.com/ricoberger/vault-secrets-operator/vault"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -297,16 +297,7 @@ func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[
 		sd.Secrets[k] = string(v)
 	}
 
-	// We need to exclude some functions for security reasons and proper working of the operator, don't use TxtFuncMap:
-	// - no environment-variable related functions to prevent secrets from accessing the VAULT environment variables
-	// - no filesystem functions? Directory functions don't actually allow access to the FS, so they're OK.
-	// - no other non-idempotent functions like random and crypto functions
-	funcmap := sprig.HermeticTxtFuncMap()
-	delete(funcmap, "genPrivateKey")
-	delete(funcmap, "genCA")
-	delete(funcmap, "genSelfSignedCert")
-	delete(funcmap, "genSignedCert")
-	delete(funcmap, "htpasswd") // bcrypt strings contain salt
+	funcmap := templatingFunctions()
 
 	tmplParser := template.New("data").Funcs(funcmap)
 
@@ -325,6 +316,30 @@ func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[
 	}
 
 	return bout.Bytes(), nil
+}
+
+func templatingFunctions() template.FuncMap {
+	// We need to exclude some functions for security reasons and proper working of the operator, don't use TxtFuncMap:
+	// - no environment-variable related functions to prevent secrets from accessing the VAULT environment variables
+	// - no filesystem functions? Directory functions don't actually allow access to the FS, so they're OK.
+	// - no other non-idempotent functions like random and crypto functions
+	funcmap := sprig.HermeticTxtFuncMap()
+
+	// contain random inputs for cryptographic reasons
+	delete(funcmap, "genPrivateKey")
+	delete(funcmap, "genCA")
+	delete(funcmap, "genCAWithKey")
+	delete(funcmap, "genSelfSignedCert")
+	delete(funcmap, "genSelfSignedCertWithKey")
+	delete(funcmap, "genSignedCert")
+	delete(funcmap, "genSignedCertWithKey")
+	delete(funcmap, "htpasswd")
+	delete(funcmap, "bcrypt")
+
+	// plain random functions
+	delete(funcmap, "randInt")
+
+	return funcmap
 }
 
 // newSecretForCR returns a secret with the same name/namespace as the CR. The secret will include all labels and
