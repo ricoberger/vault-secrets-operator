@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3
 	cloud.google.com/go/iam v1.1.3
 	github.com/Masterminds/sprig/v3 v3.2.3
-	github.com/aws/aws-sdk-go v1.45.25
+	github.com/aws/aws-sdk-go v1.46.1
 	github.com/hashicorp/vault/api v1.10.0
 	github.com/leosayous21/go-azure-msi v0.0.0-20210509193526-19353bedcfc8
 	github.com/pkg/errors v0.9.1
