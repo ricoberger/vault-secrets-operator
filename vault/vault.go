@@ -193,9 +193,15 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			return nil, nil
 		}
 
+		serviceAccountTokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
+
+		if vaultTokenPath != "" {
+			serviceAccountTokenPath = vaultTokenPath
+		}
+
 		// Read the service account token value and create a map for the
 		// authentication against Vault.
-		kubeToken, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+		kubeToken, err := ioutil.ReadFile(serviceAccountTokenPath)
 		if err != nil {
 			return nil, err
 		}
