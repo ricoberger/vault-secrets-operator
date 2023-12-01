@@ -43,7 +43,16 @@ path "kvv2/data/*" {
 EOF
 ```
 
-To access Vault the operator can choose between the **[Token Auth Method](https://www.vaultproject.io/docs/auth/token.html)** or the **[Kubernetes Auth Method](https://www.vaultproject.io/docs/auth/kubernetes.html)**. In the next sections you found the instructions to setup Vault for the two authentication methods.
+To access Vault, the operator can choose between:
+- **[Token Auth Method](https://www.vaultproject.io/docs/auth/token.html)** 
+- **[Kubernetes Auth Method](https://www.vaultproject.io/docs/auth/kubernetes.html)** 
+- **[AppRole Auth Method](https://www.vaultproject.io/docs/auth/approle.html)**
+- **[Username & Password Auth Method](https://www.vaultproject.io/docs/auth/userpass.html)**
+- **[AWS Auth Method](https://www.vaultproject.io/docs/auth/aws.html)**
+- **[Azure Auth Method](https://www.vaultproject.io/docs/auth/azure.html)**
+- **[GCP Auth Method](https://www.vaultproject.io/docs/auth/gcp.html)**
+
+ In the next sections you can find the instructions to setup Vault for the authentication methods.
 
 #### Token Auth Method
 
