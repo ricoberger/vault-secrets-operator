@@ -124,6 +124,11 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 		return nil, err
 	}
 
+	vaultRestrictNamespace, err := strconv.ParseBool(os.Getenv("VAULT_RESTRICT_NAMESPACE"))
+	if err != nil {
+		vaultRestrictNamespace = false
+	}
+
 	// Check which authentication method should be used.
 	if vaultAuthMethod == "token" {
 		// Check the required token and the provided lease duration for the
@@ -175,6 +180,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			restrictNamespace:         vaultRestrictNamespace,
 			pkiRenew:                  pkiRenew,
 		}, nil
 	}
@@ -242,6 +248,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			restrictNamespace:         vaultRestrictNamespace,
 			pkiRenew:                  pkiRenew,
 		}, nil
 	}
@@ -307,6 +314,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			tokenMaxTTL:               tokenMaxTTL,
 			rootVaultNamespace:        vaultNamespace,
+			restrictNamespace:         vaultRestrictNamespace,
 			requestToken: func(c *Client) error {
 				secret, err := apiClient.Logical().Write(appRolePath+"/login", data)
 				if err != nil {
@@ -375,6 +383,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			tokenMaxTTL:               tokenMaxTTL,
 			rootVaultNamespace:        vaultNamespace,
+			restrictNamespace:         vaultRestrictNamespace,
 			requestToken: func(c *Client) error {
 				secret, err := apiClient.Logical().Write(userPassLoginPath, data)
 				if err != nil {
@@ -466,6 +475,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			restrictNamespace:         vaultRestrictNamespace,
 			pkiRenew:                  pkiRenew,
 		}, nil
 
@@ -637,6 +647,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			restrictNamespace:         vaultRestrictNamespace,
 			tokenMaxTTL:               tokenMaxTTL,
 			requestToken: func(c *Client) error {
 				data, err := awsLoginDataFunc()
@@ -777,6 +788,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
 			rootVaultNamespace:        vaultNamespace,
+			restrictNamespace:         vaultRestrictNamespace,
 			requestToken: func(c *Client) error {
 				data, err := gcpLoginDataFunc()
 				if err != nil {

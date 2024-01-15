@@ -44,8 +44,8 @@ EOF
 ```
 
 To access Vault, the operator can choose between:
-- **[Token Auth Method](https://www.vaultproject.io/docs/auth/token.html)** 
-- **[Kubernetes Auth Method](https://www.vaultproject.io/docs/auth/kubernetes.html)** 
+- **[Token Auth Method](https://www.vaultproject.io/docs/auth/token.html)**
+- **[Kubernetes Auth Method](https://www.vaultproject.io/docs/auth/kubernetes.html)**
 - **[AppRole Auth Method](https://www.vaultproject.io/docs/auth/approle.html)**
 - **[Username & Password Auth Method](https://www.vaultproject.io/docs/auth/userpass.html)**
 - **[AWS Auth Method](https://www.vaultproject.io/docs/auth/aws.html)**
@@ -669,6 +669,8 @@ spec:
 ```
 
 The Vault Namespace, which is used to get the secret in the above example will be `my/root/ns/team1`.
+
+The operator can also be restricted to only reconcile secrets where the `spec.vaultNamespace` field is the same as the `VAULT_NAMESPACE` environment variable. For this the `VAULT_RESTRICT_NAMESPACE` environment variable must be set to `true`. When this feature is enabled the operator can not be used with nested namespaces.
 
 ### Propagating labels
 

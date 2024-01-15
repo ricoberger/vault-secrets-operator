@@ -141,6 +141,14 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
+	// If the `VAULT_RESTRICT_NAMESPACE` environment variable is set to `true` the operator should only reconcile
+	// secrets which have the same Vault namespace configured as the operator (via the `VAULT_NAMESPACE` environment
+	// variable).
+	if restricted, rootNamespace := vaultClient.IsNamespaceRestricted(); restricted && instance.Spec.VaultNamespace != rootNamespace {
+		log.Info("Ignore secret, since the operator is restricted to the another Vault namespace", "vaultNamespace", instance.Spec.VaultNamespace, "rootNamespace", rootNamespace)
+		return ctrl.Result{}, nil
+	}
+
 	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == kvEngine {
 		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
