@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -34,6 +35,8 @@ const (
 	conditionReasonUpdateFailed    = "UpdateFailed"
 	conditionReasonMergeFailed     = "MergeFailed"
 	conditionReasonInvalidResource = "InvalidResource"
+
+	vaultsecretsFinalizer = "vaultsecrets.ricoberger.de/finalizer"
 )
 
 const (
@@ -90,6 +93,21 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// indicated by the deletion timestamp being set. The object will be deleted.
 	isVaultSecretMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
 	if isVaultSecretMarkedToBeDeleted {
+		if controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
+			metrics.VaultSecretsReconciliationsTotal.DeleteLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionTrue))
+			metrics.VaultSecretsReconciliationsTotal.DeleteLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionFalse))
+			metrics.VaultSecretsReconciliationStatus.DeleteLabelValues(instance.Namespace, instance.Name)
+
+			// Remove the vaultsecretsFinalizer. Once the finalizer is removed the object will be deleted.
+			controllerutil.RemoveFinalizer(instance, vaultsecretsFinalizer)
+			err = r.Update(ctx, instance)
+			if err != nil {
+				log.Error(err, "Failed to remove finalizer.")
+				r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
+				return ctrl.Result{}, err
+			}
+		}
+
 		return ctrl.Result{}, nil
 	}
 
@@ -216,6 +234,18 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 		r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
+	}
+
+	// Finally we add the vaultsecretsFinalizer to the VaultSecret. The finilizer is needed so that we can remove the
+	// metrics for a delete secret.
+	if !controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
+		controllerutil.AddFinalizer(instance, vaultsecretsFinalizer)
+		err := r.Update(ctx, instance)
+		if err != nil {
+			log.Error(err, "Failed to add finalizer.")
+			r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Secret updated successfully - requeue only if no version is specified
