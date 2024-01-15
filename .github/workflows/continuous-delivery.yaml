@@ -48,5 +48,5 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
-          platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8
+          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm64/v8
           tags: ricoberger/vault-secrets-operator:${{ env.TAG }}
