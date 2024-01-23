@@ -122,7 +122,7 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 	// already failed.
 	if c.rootVaultNamespace != "" {
 		log.WithValues("rootVaultNamespace", c.rootVaultNamespace, "vaultNamespace", vaultNamespace).Info(fmt.Sprintf("Use Vault Namespace to read secret %s", path))
-		if vaultNamespace != "" {
+		if vaultNamespace != "" && !c.restrictNamespace {
 			c.client.SetNamespace(c.rootVaultNamespace + "/" + vaultNamespace)
 		} else {
 			c.client.SetNamespace(c.rootVaultNamespace)
