@@ -711,19 +711,20 @@ After modifying the `*_types.go` file always run the following command to update
 make generate
 ```
 
-The above makefile target will invoke the [controller-gen](https://sigs.k8s.io/controller-tools) utility to update the `api/v1alpha1/zz_generated.deepcopy.go` file to ensure our API's Go type definitons implement the `runtime.Object` interface that all Kind types must implement.
+The above Makefile target will invoke the [controller-gen](https://sigs.k8s.io/controller-tools) utility to update the
+`api/v1alpha1/zz_generated.deepcopy.go` file to ensure our API's Go type definitons implement the `runtime.Object`
+interface that all Kind types must implement.
 
-Once the API is defined with spec/status fields and CRD validation markers, the CRD manifests can be generated and updated with the following command:
+Once the API is defined with spec/status fields and CRD validation markers, the CRD manifests can be generated and
+updated with the following command:
 
 ```sh
 make manifests
 ```
 
-This makefile target will invoke controller-gen to generate the CRD manifests at `config/crd/bases/ricoberger.de_vaultsecrets.yaml`.
+This Makefile target will invoke controller-gen to generate the CRD manifest at `charts/vault-secrets-operator/crds/ricoberger.de_vaultsecrets.yaml`.
 
-### Locally
-
-Specify the Vault address, a token to access Vault and the TTL (in seconds) for the token:
+Deploy the CRD and run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
 
 ```sh
 export VAULT_ADDRESS=
@@ -731,41 +732,9 @@ export VAULT_AUTH_METHOD=token
 export VAULT_TOKEN=
 export VAULT_TOKEN_LEASE_DURATION=86400
 export VAULT_RECONCILIATION_TIME=180
+
+make run
 ```
-
-Deploy the CRD and run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
-
-```sh
-make install run
-```
-
-### Minikube
-
-Reuse Minikube's built-in Docker daemon:
-
-```sh
-eval $(minikube docker-env)
-```
-
-Build the Docker image for the operator:
-
-```sh
-make docker-build IMG=ricoberger/vault-secrets-operator:dev
-```
-
-Run the following to deploy the operator. This will also install the RBAC manifests from `config/rbac`.
-
-```sh
-make deploy IMG=ricoberger/vault-secrets-operator:dev
-```
-
-Deploy the Helm chart:
-
-```sh
-helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="$VAULT_ADDRESS" --set image.repository="ricoberger/vault-secrets-operator" --set image.tag="dev"
-```
-
-For an example using [kind](https://kind.sigs.k8s.io) you can take a look at the `hack/setup-kind.sh` file.
 
 ## Links
 

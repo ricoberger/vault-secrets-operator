@@ -1,8 +1,0 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-# Adds namespace to all resources.
-namespace: vault-secrets-operator
-resources:
-- ../crd
-- ../rbac
-- ../manager
