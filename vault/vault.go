@@ -22,7 +22,7 @@ import (
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/vault/api"
-	"github.com/leosayous21/go-azure-msi/msi"
+	"github.com/padoa/go-azure-msi/msi"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
@@ -92,12 +92,12 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultGcpPath := os.Getenv("VAULT_GCP_PATH")
 	vaultGcpAuthType := os.Getenv("VAULT_GCP_AUTH_TYPE")
 	vaultGcpRole := os.Getenv("VAULT_GCP_ROLE")
-	vaultRoleID := setVaultIDs("role")
-	vaultSecretID := setVaultIDs("secret")
+	vaultGcpServiceAccountEmail := os.Getenv("VAULT_GCP_SERVICE_ACCOUNT_EMAIL")
 	vaultTokenMaxTTL := os.Getenv("VAULT_TOKEN_MAX_TTL")
 	vaultNamespace := os.Getenv("VAULT_NAMESPACE")
 	vaultPKIRenew := os.Getenv("VAULT_PKI_RENEW")
 	vaultDatabaseRenew := os.Getenv("VAULT_DATABASE_RENEW")
+	vaultAzureMsiObjectID := os.Getenv("AZURE_MSI_OBJECT_ID")
 
 	// Create new Vault configuration. This configuration is used to create the
 	// API client. We set the timeout of the HTTP client to 10 seconds.
@@ -123,7 +123,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 		vaultDatabaseRenew = "168h"
 	}
 
-	PKIRenew, err := time.ParseDuration(vaultPKIRenew)
+	pkiRenew, err := time.ParseDuration(vaultPKIRenew)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +252,9 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	}
 
 	if vaultAuthMethod == "approle" {
+		vaultRoleID := setVaultIDs("role")
+		vaultSecretID := setVaultIDs("secret")
+
 		if vaultRoleID == "" {
 			return nil, fmt.Errorf("missing role id for AppRole auth method")
 		}
@@ -344,7 +347,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		// Read the service account token value and create a map for the
 		// authentication against Vault.
-		msiToken, err := msi.GetMsiToken()
+		msiToken, err := msi.GetMsiToken(vaultAzureMsiObjectID)
 		if err != nil {
 			return nil, err
 		}
@@ -630,16 +633,18 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 					return nil, fmt.Errorf("could not create IAM client: %w", err)
 				}
 
-				metadataClient := gcpmetadata.NewClient(nil)
-				serviceAccountEmail, err := metadataClient.Email("default")
-				if err != nil {
-					return nil, fmt.Errorf("could not obtain service account from credentials; a service account to authenticate as must be provided")
+				if vaultGcpServiceAccountEmail == "" {
+					metadataClient := gcpmetadata.NewClient(nil)
+					vaultGcpServiceAccountEmail, err = metadataClient.Email("default")
+					if err != nil {
+						return nil, fmt.Errorf("could not obtain service account from credentials; a service account to authenticate as must be provided")
+					}
 				}
 
 				ttl := time.Minute * time.Duration(15)
 				jwtPayload := map[string]interface{}{
 					"aud": fmt.Sprintf("vault/%s", vaultGcpRole),
-					"sub": serviceAccountEmail,
+					"sub": vaultGcpServiceAccountEmail,
 					"exp": time.Now().Add(ttl).Unix(),
 				}
 
@@ -648,7 +653,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 					return nil, fmt.Errorf("could not convert JWT payload to JSON string: %w", err)
 				}
 
-				resourceName := fmt.Sprintf("projects/-/serviceAccounts/%s", serviceAccountEmail)
+				resourceName := fmt.Sprintf("projects/-/serviceAccounts/%s", vaultGcpServiceAccountEmail)
 				req := &gcpcredentialspb.SignJwtRequest{
 					Name:    resourceName,
 					Payload: string(payloadBytes),
@@ -744,6 +749,7 @@ func stsSigningResolver(service, region string, optFns ...func(*endpoints.Option
 
 func setVaultIDs(idType string) string {
 	var idPath string
+
 	if idType == "role" {
 		id, found := os.LookupEnv("VAULT_ROLE_ID")
 		if found {
@@ -751,6 +757,7 @@ func setVaultIDs(idType string) string {
 		}
 		idPath = os.Getenv("VAULT_ROLE_ID_PATH")
 	}
+
 	if idType == "secret" {
 		id, found := os.LookupEnv("VAULT_SECRET_ID")
 		if found {
@@ -758,10 +765,12 @@ func setVaultIDs(idType string) string {
 		}
 		idPath = os.Getenv("VAULT_SECRET_ID_PATH")
 	}
+
 	id, err := ioutil.ReadFile(idPath)
 	if err != nil {
 		log.WithValues("VaultFilePath", idPath).Error(err, "missing secret vault-secrets-operator or bad path in volume")
 		return string(id)
 	}
+
 	return string(id)
 }

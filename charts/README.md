@@ -5,7 +5,8 @@
 | `replicaCount` | Number of replications which should be created. | `1` |
 | `deploymentStrategy` | Deployment strategy which should be used. | `{}` |
 | `image.repository` | The repository of the Docker image. | `ricoberger/vault-secrets-operator` |
-| `image.tag` | The tag of the Docker image which should be used. | `1.17.0` |
+| `image.tag` | The tag of the Docker image which should be used. | `1.19.6` |
+| `image.digest` | The image digest of the Docker image which should be used | `""` | 
 | `image.pullPolicy` | The pull policy for the Docker image, | `IfNotPresent` |
 | `image.volumeMounts` | Mount additional volumns to the container. | `[]` |
 | `imagePullSecrets` | Secrets which can be used to pull the Docker image. | `[]` |
@@ -23,6 +24,7 @@
 | `vault.awsRole` | The name of the role which is configured for the AWS auth method. | `vault-secrets-operator` |
 | `vault.gcpPath` | If the GCP auth method is used, this is the path where the GCP auth method is enabled. | `auth/gcp` |
 | `vault.gcpAuthType` | If the GCP auth method is used, this is the auth type GCP auth method should use. `gce` or `iam` | `iam` |
+| `vault.gcpServiceAccountEmail` | If the GCP auth method and iam auth type are used, this is the email of the service account to authenticate as. If not specified, vault-secrets-operator will try to deduce it from GCP metadata server | `""` |
 | `vault.gcpRole` | The name of the role which is configured for the GCP auth method. | `vault-secrets-operator` |
 | `vault.appRolePath` | If the AppRole auth method is used, this is the path where the AppRole auth method is enabled. | `auth/approle` |
 | `vault.reconciliationTime` | The time after which the reconcile function for the CR is rerun. If the value is 0, automatic reconciliation is skipped. | `0` |

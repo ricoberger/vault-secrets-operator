@@ -1,0 +1,85 @@
+name: Continuous Integration
+
+on: pull_request
+
+jobs:
+  kubernetes:
+    name: Kubernetes
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        deployment:
+          - kubernetes-sharedclient
+          - kubernetes-nosharedclient
+          - kubernetes-namespaced
+          - approle-env-vars
+          - approle-no-env-vars
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Vault
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get update && sudo apt-get install vault
+
+      - name: Setup kind Cluster
+        run: ./hack/setup-kind.sh
+
+      - name: Run Test
+        run: ./hack/setup-kind-${{ matrix.deployment }}.sh
+        env:
+          VAULT_ADDR: http://127.0.0.1:8200
+
+      - name: Show Pod Status and Logs
+        if: ${{ always() }}
+        run: |
+          kubectl get pods --namespace vault
+          kubectl logs --namespace=vault vault-0
+          kubectl get pods --namespace vault-secrets-operator
+          kubectl logs --namespace=vault-secrets-operator -l app.kubernetes.io/instance=vault-secrets-operator
+
+  go:
+    name: Go
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download Dependencies
+        run: |
+          go mod download
+
+      - name: Test
+        run: |
+          make test
+
+      - name: Build
+        run: |
+          make build

@@ -11,7 +11,7 @@ kubectl create ns vault-secrets-operator
 
 # Install Vault in the cluster and create a new secret engine for the operator
 helm repo add hashicorp https://helm.releases.hashicorp.com
-helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.19.0 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.9.3"
+helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.21.0 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.11.2"
 
 sleep 10s
 kubectl wait pod/vault-0 --namespace=vault  --for=condition=Ready --timeout=180s
@@ -52,31 +52,17 @@ vault:
 image:
   repository: localhost:5000/vault-secrets-operator
   tag: test
-  volumeMounts:
-    - name: vault-role-id
-      mountPath: "/etc/vault/role/"
-      readOnly: true
-    - name: vault-secret-id
-      mountPath: "/etc/vault/secret/"
-      readOnly: true
 environmentVars:
-  - name: VAULT_ROLE_ID_PATH
-    value: "/etc/vault/role/id"
-  - name: VAULT_SECRET_ID_PATH
-    value: "/etc/vault/secret/id"
-volumes:
-  - name: vault-role-id
-    secret:
-      secretName: vault-secrets-operator
-      items:
-        - key: VAULT_ROLE_ID
-          path: "id"
-  - name: vault-secret-id
-    secret:
-      secretName: vault-secrets-operator
-      items:
-        - key: VAULT_SECRET_ID
-          path: "id"
+  - name: VAULT_ROLE_ID
+    valueFrom:
+      secretKeyRef:
+        name: vault-secrets-operator
+        key: VAULT_ROLE_ID
+  - name: VAULT_SECRET_ID
+    valueFrom:
+      secretKeyRef:
+        name: vault-secrets-operator
+        key: VAULT_SECRET_ID
 EOF
 
 helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator -f ./values.yaml
