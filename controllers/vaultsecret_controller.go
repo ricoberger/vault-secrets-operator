@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"text/template"
 	"time"
 
@@ -225,23 +226,33 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if instance.Spec.ReconcileStrategy == "Merge" {
 		secret = mergeSecretData(secret, found)
 
-		log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-		err = r.Update(ctx, secret)
-		if err != nil {
-			log.Error(err, "Could not update secret")
-			r.updateConditions(ctx, instance, conditionReasonMergeFailed, err.Error(), metav1.ConditionFalse)
-			return ctrl.Result{}, err
+		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) &&
+			reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) {
+			log.Info("Skip updating a Secret cause data no change", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+		} else {
+			log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+			err = r.Update(ctx, secret)
+			if err != nil {
+				log.Error(err, "Could not update secret")
+				r.updateConditions(ctx, instance, conditionReasonMergeFailed, err.Error(), metav1.ConditionFalse)
+				return ctrl.Result{}, err
+			}
+			r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 		}
-		r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 	} else {
-		log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-		err = r.Update(ctx, secret)
-		if err != nil {
-			log.Error(err, "Could not update secret")
-			r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
-			return ctrl.Result{}, err
+		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) &&
+			reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) {
+			log.Info("Skip updating a Secret cause no change", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+		} else {
+			log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+			err = r.Update(ctx, secret)
+			if err != nil {
+				log.Error(err, "Could not update secret")
+				r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
+				return ctrl.Result{}, err
+			}
+			r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 		}
-		r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 	}
 
 	// Finally we add the vaultsecretsFinalizer to the VaultSecret. The finilizer is needed so that we can remove the
