@@ -175,7 +175,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 		// Requeue before expiration
 		log.Info(fmt.Sprintf("Certificate will expire on %s", expiration.String()))
-		ra := expiration.Sub(time.Now()) - vaultClient.GetPKIRenew()
+		ra := time.Until(*expiration) - vaultClient.GetPKIRenew()
 		if ra <= 0 {
 			reconcileResult.Requeue = true
 		} else {
@@ -409,7 +409,7 @@ func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte
 		for k, v := range cr.Spec.Templates {
 			templated, err := runTemplate(cr, v, data)
 			if err != nil {
-				return nil, fmt.Errorf("Template ERROR: %w", err)
+				return nil, fmt.Errorf("template ERROR: %w", err)
 			}
 			newdata[k] = templated
 		}
