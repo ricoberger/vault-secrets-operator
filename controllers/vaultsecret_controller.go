@@ -394,16 +394,6 @@ func templatingFunctions() template.FuncMap {
 // newSecretForCR returns a secret with the same name/namespace as the CR. The secret will include all labels and
 // annotations from the CR.
 func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte) (*corev1.Secret, error) {
-	labels := map[string]string{}
-	for k, v := range cr.ObjectMeta.Labels {
-		labels[k] = v
-	}
-
-	annotations := map[string]string{}
-	for k, v := range cr.ObjectMeta.Annotations {
-		annotations[k] = v
-	}
-
 	if cr.Spec.Templates != nil {
 		newdata := make(map[string][]byte)
 		for k, v := range cr.Spec.Templates {
@@ -420,8 +410,8 @@ func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        cr.Name,
 			Namespace:   cr.Namespace,
-			Labels:      labels,
-			Annotations: annotations,
+			Labels:      cr.ObjectMeta.Labels,
+			Annotations: cr.ObjectMeta.Annotations,
 		},
 		Data: data,
 		Type: cr.Spec.Type,
