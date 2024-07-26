@@ -175,7 +175,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 		// Requeue before expiration
 		log.Info(fmt.Sprintf("Certificate will expire on %s", expiration.String()))
-		ra := expiration.Sub(time.Now()) - vaultClient.GetPKIRenew()
+		ra := time.Until(*expiration) - vaultClient.GetPKIRenew()
 		if ra <= 0 {
 			reconcileResult.Requeue = true
 		} else {
@@ -394,22 +394,12 @@ func templatingFunctions() template.FuncMap {
 // newSecretForCR returns a secret with the same name/namespace as the CR. The secret will include all labels and
 // annotations from the CR.
 func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte) (*corev1.Secret, error) {
-	labels := map[string]string{}
-	for k, v := range cr.ObjectMeta.Labels {
-		labels[k] = v
-	}
-
-	annotations := map[string]string{}
-	for k, v := range cr.ObjectMeta.Annotations {
-		annotations[k] = v
-	}
-
 	if cr.Spec.Templates != nil {
 		newdata := make(map[string][]byte)
 		for k, v := range cr.Spec.Templates {
 			templated, err := runTemplate(cr, v, data)
 			if err != nil {
-				return nil, fmt.Errorf("Template ERROR: %w", err)
+				return nil, fmt.Errorf("template ERROR: %w", err)
 			}
 			newdata[k] = templated
 		}
@@ -420,8 +410,8 @@ func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        cr.Name,
 			Namespace:   cr.Namespace,
-			Labels:      labels,
-			Annotations: annotations,
+			Labels:      cr.ObjectMeta.Labels,
+			Annotations: cr.ObjectMeta.Annotations,
 		},
 		Data: data,
 		Type: cr.Spec.Type,
