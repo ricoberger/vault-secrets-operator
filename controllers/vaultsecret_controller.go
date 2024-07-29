@@ -226,8 +226,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if instance.Spec.ReconcileStrategy == "Merge" {
 		secret = mergeSecretData(secret, found)
 
-		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) &&
-			reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) {
+		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) && reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) && len(instance.Status.Conditions) == 1 && instance.Status.Conditions[0].Status == metav1.ConditionTrue {
 			log.Info("Skip updating a Secret cause data no change", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
 		} else {
 			log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
@@ -240,8 +239,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 		}
 	} else {
-		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) &&
-			reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) {
+		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) && reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) && len(instance.Status.Conditions) == 1 && instance.Status.Conditions[0].Status == metav1.ConditionTrue {
 			log.Info("Skip updating a Secret cause no change", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
 		} else {
 			log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
