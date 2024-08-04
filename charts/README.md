@@ -4,8 +4,8 @@
 | ----- | ----------- | ------- |
 | `replicaCount` | Number of replications which should be created. | `1` |
 | `deploymentStrategy` | Deployment strategy which should be used. | `{}` |
-| `image.repository` | The repository of the Docker image. | `ricoberger/vault-secrets-operator` |
-| `image.tag` | The tag of the Docker image which should be used. | `v1.24.6` |
+| `image.repository` | The repository of the Docker image. | `ghcr.io/ricoberger/vault-secrets-operator` |
+| `image.tag` | The tag of the Docker image which should be used. | `v1.25.0` |
 | `image.digest` | The image digest of the Docker image which should be used | `""` |
 | `image.pullPolicy` | The pull policy for the Docker image, | `IfNotPresent` |
 | `image.volumeMounts` | Mount additional volumns to the container. | `[]` |
