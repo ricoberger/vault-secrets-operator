@@ -1,9 +1,12 @@
+---
 version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
+    reviewers:
+      - "ricoberger"
     assignees:
       - "ricoberger"
     groups:
@@ -15,6 +18,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    reviewers:
+      - "ricoberger"
     assignees:
       - "ricoberger"
     groups:
@@ -26,6 +31,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    reviewers:
+      - "ricoberger"
     assignees:
       - "ricoberger"
     groups:
