@@ -27,6 +27,13 @@ spec:
 {{ include "vault-secrets-operator.annotations" . | indent 8 }}
       {{- end }}
     spec:
+      {{- with .Values.dnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dnsPolicy }}
+      dnsPolicy: {{ . }}
+      {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -34,6 +41,10 @@ spec:
       serviceAccountName: {{ template "vault-secrets-operator.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.includeInitContainers }}
+      initContainers:
+      {{- include "vault-secrets-operator.initContainers" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -49,7 +60,11 @@ spec:
           env:
             - name: WATCH_NAMESPACE
             {{- if .Values.vault.namespaces }}
+              {{- if kindIs "slice" .Values.vault.namespaces }}
+              value: {{ .Values.vault.namespaces | join "," | quote }}
+              {{- else }}
               value: {{ .Values.vault.namespaces | quote }}
+              {{- end -}}
             {{- else if .Values.rbac.namespaced }}
               value: {{ .Release.Namespace | quote }}
             {{- else }}
@@ -140,7 +155,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.topologySpreadConstraints }}
-      topologySpreadConstraints: 
+      topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- if .Values.priorityClassName }}

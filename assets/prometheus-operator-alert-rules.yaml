@@ -1,0 +1,17 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: vault-secrets-operator
+spec:
+  groups:
+    - name: vault-secrets-operator
+      rules:
+        - alert: VaultSecretsOperatorReconcilationFailed
+          expr: sum(vaultsecrets_reconciliation_status) by (namespace, name) == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            message: A VaultSecret could not be reconcilied, check the "Custom Resources" tab of the Vault Secrets Operator application in kobs.
+            runbook_url: https://backstage.staffbase.com/docs/default/Component/redbook/runbooks/vault-secrets-operator-alerts/#VaultSecretsOperatorReconcilationFailed

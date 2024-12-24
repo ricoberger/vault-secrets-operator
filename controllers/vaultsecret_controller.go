@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"github.com/hashicorp/vault/api"
 	"os"
+	"reflect"
 	"text/template"
 	"time"
 
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
+	"github.com/ricoberger/vault-secrets-operator/controllers/metrics"
 	"github.com/ricoberger/vault-secrets-operator/vault"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,20 +22,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 const (
-	conditionTypeSecretCreated  = "SecretCreated"
-	conditionReasonFetchFailed  = "FetchFailed"
-	conditionReasonCreated      = "Created"
-	conditionReasonCreateFailed = "CreateFailed"
-	conditionReasonUpdated      = "Updated"
-	conditionReasonUpdateFailed = "UpdateFailed"
-	conditionReasonMergeFailed  = "MergeFailed"
-	conditionInvalidResource    = "InvalidResource"
+	conditionTypeSecretCreated     = "SecretCreated"
+	conditionReasonFetchFailed     = "FetchFailed"
+	conditionReasonCreated         = "Created"
+	conditionReasonCreateFailed    = "CreateFailed"
+	conditionReasonUpdated         = "Updated"
+	conditionReasonUpdateFailed    = "UpdateFailed"
+	conditionReasonMergeFailed     = "MergeFailed"
+	conditionReasonInvalidResource = "InvalidResource"
+
+	vaultsecretsFinalizer = "vaultsecrets.ricoberger.de/finalizer"
 )
 
 // VaultSecretReconciler reconciles a VaultSecret object
@@ -81,6 +86,28 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	// Check if the VaultSecret instance is marked to be deleted, which is
+	// indicated by the deletion timestamp being set. The object will be deleted.
+	isVaultSecretMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isVaultSecretMarkedToBeDeleted {
+		if controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
+			metrics.VaultSecretsReconciliationsTotal.DeleteLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionTrue))
+			metrics.VaultSecretsReconciliationsTotal.DeleteLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionFalse))
+			metrics.VaultSecretsReconciliationStatus.DeleteLabelValues(instance.Namespace, instance.Name)
+
+			// Remove the vaultsecretsFinalizer. Once the finalizer is removed the object will be deleted.
+			controllerutil.RemoveFinalizer(instance, vaultsecretsFinalizer)
+			err = r.Update(ctx, instance)
+			if err != nil {
+				log.Error(err, "Failed to remove finalizer.")
+				r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
+				return ctrl.Result{}, err
+			}
+		}
+
+		return ctrl.Result{}, nil
+	}
+
 	// Get secret from Vault.
 	// If the VaultSecret contains the vaulRole property we are creating a new client with the specified Vault Role to
 	// get the secret.
@@ -114,8 +141,16 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	var expiresAt *time.Time
 	var requeueAfter time.Duration
 
-	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == ricobergerdev1alpha1.KVEngine {
-		secret, err := vaultClient.GetSecret(instance.Spec.Path, instance.Spec.Version, instance.Spec.VaultNamespace)
+	// If the `VAULT_RESTRICT_NAMESPACE` environment variable is set to `true` the operator should only reconcile
+	// secrets which have the same Vault namespace configured as the operator (via the `VAULT_NAMESPACE` environment
+	// variable).
+	if restricted, rootNamespace := vaultClient.IsNamespaceRestricted(); restricted && instance.Spec.VaultNamespace != rootNamespace {
+		log.Info("Ignore secret, since the operator is restricted to the another Vault namespace", "vaultNamespace", instance.Spec.VaultNamespace, "rootNamespace", rootNamespace)
+		return ctrl.Result{}, nil
+	}
+
+	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == kvEngine {
+		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
 			log.Error(err, "Could not get secret from vault")
 			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
@@ -131,7 +166,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	} else if instance.Spec.SecretEngine == ricobergerdev1alpha1.PKIEngine {
 		if err := ValidatePKI(instance); err != nil {
 			log.Error(err, "Resource validation failed")
-			r.updateConditions(ctx, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
+			r.updateConditions(ctx, instance, conditionReasonInvalidResource, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
@@ -225,23 +260,45 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if instance.Spec.ReconcileStrategy == "Merge" {
 		secret = mergeSecretData(secret, found)
 
-		log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-		err = r.Update(ctx, secret)
-		if err != nil {
-			log.Error(err, "Could not update secret")
-			r.updateConditions(ctx, instance, conditionReasonMergeFailed, err.Error(), metav1.ConditionFalse)
-			return ctrl.Result{}, err
+		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) &&
+			reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) {
+			log.Info("Skip updating a Secret cause data no change", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+		} else {
+			log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+			err = r.Update(ctx, secret)
+			if err != nil {
+				log.Error(err, "Could not update secret")
+				r.updateConditions(ctx, instance, conditionReasonMergeFailed, err.Error(), metav1.ConditionFalse)
+				return ctrl.Result{}, err
+			}
+			r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 		}
-		r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 	} else {
-		log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-		err = r.Update(ctx, secret)
+		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) &&
+			reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) {
+			log.Info("Skip updating a Secret cause no change", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+		} else {
+			log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+			err = r.Update(ctx, secret)
+			if err != nil {
+				log.Error(err, "Could not update secret")
+				r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
+				return ctrl.Result{}, err
+			}
+			r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
+		}
+	}
+
+	// Finally we add the vaultsecretsFinalizer to the VaultSecret. The finilizer is needed so that we can remove the
+	// metrics for a delete secret.
+	if !controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
+		controllerutil.AddFinalizer(instance, vaultsecretsFinalizer)
+		err := r.Update(ctx, instance)
 		if err != nil {
-			log.Error(err, "Could not update secret")
+			log.Error(err, "Failed to add finalizer.")
 			r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
-		r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 	}
 
 	return reconcileResult, nil
@@ -257,7 +314,14 @@ func (r *VaultSecretReconciler) updateExpiration(ctx context.Context, log logr.L
 	//}
 }
 
-func (r *VaultSecretReconciler) updateConditions(ctx context.Context, log logr.Logger, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {
+func (r *VaultSecretReconciler) updateConditions(ctx context.Context, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {
+	metrics.VaultSecretsReconciliationsTotal.WithLabelValues(instance.Namespace, instance.Name, string(status)).Inc()
+	if status == metav1.ConditionTrue {
+		metrics.VaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(1)
+	} else {
+		metrics.VaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(0)
+	}
+
 	instance.Status.Conditions = []metav1.Condition{{
 		Type:               conditionTypeSecretCreated,
 		Status:             status,
@@ -325,16 +389,7 @@ func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[
 		sd.Secrets[k] = string(v)
 	}
 
-	// We need to exclude some functions for security reasons and proper working of the operator, don't use TxtFuncMap:
-	// - no environment-variable related functions to prevent secrets from accessing the VAULT environment variables
-	// - no filesystem functions? Directory functions don't actually allow access to the FS, so they're OK.
-	// - no other non-idempotent functions like random and crypto functions
-	funcmap := sprig.HermeticTxtFuncMap()
-	delete(funcmap, "genPrivateKey")
-	delete(funcmap, "genCA")
-	delete(funcmap, "genSelfSignedCert")
-	delete(funcmap, "genSignedCert")
-	delete(funcmap, "htpasswd") // bcrypt strings contain salt
+	funcmap := templatingFunctions()
 
 	tmplParser := template.New("data").Funcs(funcmap)
 
@@ -353,6 +408,30 @@ func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[
 	}
 
 	return bout.Bytes(), nil
+}
+
+func templatingFunctions() template.FuncMap {
+	// We need to exclude some functions for security reasons and proper working of the operator, don't use TxtFuncMap:
+	// - no environment-variable related functions to prevent secrets from accessing the VAULT environment variables
+	// - no filesystem functions? Directory functions don't actually allow access to the FS, so they're OK.
+	// - no other non-idempotent functions like random and crypto functions
+	funcmap := sprig.HermeticTxtFuncMap()
+
+	// contain random inputs for cryptographic reasons
+	delete(funcmap, "genPrivateKey")
+	delete(funcmap, "genCA")
+	delete(funcmap, "genCAWithKey")
+	delete(funcmap, "genSelfSignedCert")
+	delete(funcmap, "genSelfSignedCertWithKey")
+	delete(funcmap, "genSignedCert")
+	delete(funcmap, "genSignedCertWithKey")
+	delete(funcmap, "htpasswd")
+	delete(funcmap, "bcrypt")
+
+	// plain random functions
+	delete(funcmap, "randInt")
+
+	return funcmap
 }
 
 // newSecretForCR returns a secret with the same name/namespace as the CR. The secret will include all labels and

@@ -43,7 +43,16 @@ path "kvv2/data/*" {
 EOF
 ```
 
-To access Vault the operator can choose between the **[Token Auth Method](https://www.vaultproject.io/docs/auth/token.html)** or the **[Kubernetes Auth Method](https://www.vaultproject.io/docs/auth/kubernetes.html)**. In the next sections you found the instructions to setup Vault for the two authentication methods.
+To access Vault, the operator can choose between:
+- **[Token Auth Method](https://www.vaultproject.io/docs/auth/token.html)**
+- **[Kubernetes Auth Method](https://www.vaultproject.io/docs/auth/kubernetes.html)**
+- **[AppRole Auth Method](https://www.vaultproject.io/docs/auth/approle.html)**
+- **[Username & Password Auth Method](https://www.vaultproject.io/docs/auth/userpass.html)**
+- **[AWS Auth Method](https://www.vaultproject.io/docs/auth/aws.html)**
+- **[Azure Auth Method](https://www.vaultproject.io/docs/auth/azure.html)**
+- **[GCP Auth Method](https://www.vaultproject.io/docs/auth/gcp.html)**
+
+ In the next sections you can find the instructions to setup Vault for the authentication methods.
 
 #### Token Auth Method
 
@@ -93,7 +102,7 @@ The recommended way to authenticate is the Kubernetes auth method, which require
 
 ```sh
 export VAULT_SECRETS_OPERATOR_NAMESPACE=$(kubectl get sa vault-secrets-operator -o jsonpath="{.metadata.namespace}")
-export VAULT_SECRET_NAME=$(kubectl get sa vault-secrets-operator -o jsonpath="{.secrets[*]['name']}")
+export VAULT_SECRET_NAME=$(kubectl get secret vault-secrets-operator -o jsonpath="{.metadata.name}")
 export SA_JWT_TOKEN=$(kubectl get secret $VAULT_SECRET_NAME -o jsonpath="{.data.token}" | base64 --decode; echo)
 export SA_CA_CRT=$(kubectl get secret $VAULT_SECRET_NAME -o jsonpath="{.data['ca\.crt']}" | base64 --decode; echo)
 export K8S_HOST=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
@@ -125,13 +134,11 @@ vault write auth/kubernetes/role/vault-secrets-operator \
   policies=vault-secrets-operator \
   ttl=24h
 
-# If you're running Vault inside kubernetes, you can alternatively exec into any Vault pod and run this...
-# In some bare-metal k8s setups this method is necessary.
+# If you're running Vault inside Kubernetes, you can alternatively exec into any Vault pod and run this...
+# In modern versions of vault, the token / host / CA cert will be fetched automatically.
+# https://github.com/hashicorp/vault-plugin-auth-kubernetes/issues/121#issuecomment-1046949951
 # vault write auth/kubernetes/config \
-#   issuer="https://kubernetes.default.svc.cluster.local" \
-#   token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
-#   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443 \
-#   kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+#   kubernetes_host=https://${KUBERNETES_PORT_443_TCP_ADDR}:443
 ```
 
 When you deploy the Vault Secrets Operator via Helm chart you have to set the `vault.authMethod` property to `kubernetes` in the `values.yaml` file, to use the Kubernetes auth method instead of the default Token auth methods.
@@ -144,7 +151,6 @@ vault:
 #### AppRole Auth Method
 
 To use AppRole auth method for the authentication against the Vault API, you need to create a new AppRole.
-
 
 ```sh
 # Enable AppRole auth method:
@@ -162,6 +168,7 @@ vault write -f auth/approle/role/vault-secrets-operator/secret-id
 ```
 
 Use the following commands to set the environment variables for the activation of the AppRole auth method:
+
 ```shell
 export VAULT_AUTH_METHOD=approle
 export VAULT_ROLE_ID=
@@ -176,6 +183,7 @@ vault:
   authMethod: approle
 ```
 
+Set `VAULT_TOKEN_MAX_TTL` (default: 16 days) same or lower than the `token_max_ttl` of the AppRole (Vault default: 32 days) to ensure reauthentication in time.
 Mounting the vault ROLE_ID and SECRET_ID secrets as volumes is supported.  It requires `image.volumeMounts` to be populated, `VAULT_ROLE_ID_PATH` and `VAULT_SECRET_ID_PATH` to be set in `environmentVars`(or `export` as shell variables), and `volumes` to be populated.  See example below:
 
 NOTE: `image.volumeMounts[].mountPath` must match `environmentVars[].value` for the respective ROLE_ID or SECRET_ID.  Reference [Kubernetes: Using Secrets as files from a Pod](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-files-from-a-pod)
@@ -209,10 +217,40 @@ volumes:
           path: "id"
 ```
 
+### Username and Password
+
+To use username and password auth method for the authentication against the Vault API, you need to create a new user.
+
+```sh
+# Enable userpass auth method
+vault auth enable userpass
+
+# Create a user if not already created
+vault write auth/userpass/users/<username> password=<password> policies=<policies>
+```
+
+Use the following commands to set the environment variables for the activation of the UserPass auth method:
+
+```shell
+export VAULT_AUTH_METHOD=userpass
+export VAULT_USER=
+export VAULT_PASSWORD=
+export VAULT_TOKEN_MAX_TTL=120
+```
+
+When you deploy the Vault Secrets Operator via Helm chart you have to set the `vault.authMethod` property to `userpass`
+in the `values.yaml` file, to use the UserPass auth method instead of the default Token auth method.
+
+```yaml
+vault:
+  authMethod: userpass
+```
+
 ### AWS Auth Method
 
 You can use either ec2 or iam auth types on eks clusters to authenticate against the Vault API. [here](https://www.vaultproject.io/docs/auth/aws)
 Then you can enable the auth method with the following environment variables:
+
 ```shell
 export VAULT_AUTH_METHOD=aws
 export VAULT_AWS_PATH=auth/aws
@@ -226,6 +264,7 @@ If you deploy the Vault Secrets Operator via Helm you have to set the `vault.aut
 
 You can use the managed system identity provided on aks cluster to authenticate against the Vault API, to do that you will need to setup an auth backend as described [here](https://www.vaultproject.io/docs/auth/azure)
 Then you can setup the auth method with the following environment variables:
+
 ```shell
 export VAULT_AUTH_METHOD=azure
 export VAULT_AZURE_PATH=auth/azure
@@ -239,6 +278,7 @@ If you deploy the Vault Secrets Operator via Helm you have to set the `vault.aut
 
 You can use either gce or iam auth types on gke clusters to authenticate against the Vault API. [here](https://www.vaultproject.io/docs/auth/gcp)
 Then you can enable the auth method with the following environment variables:
+
 ```shell
 export VAULT_AUTH_METHOD=gcp
 export VAULT_GCP_PATH=auth/gcp
@@ -531,7 +571,7 @@ spec:
 ```
 
 You can pass any of the parameters supported by the PKI engine in `engineOptions`.
-A list is available here: https://www.vaultproject.io/api-docs/secret/pki#parameters-15
+A list is available here: [https://www.vaultproject.io/api-docs/secret/pki#parameters-15](https://www.vaultproject.io/api-docs/secret/pki#parameters-15)
 
 This will generate the following secret:
 
@@ -571,6 +611,7 @@ spec:
 ```
 
 The following fields are available:
+
 * `certificate`
 * `expiration`
 * `issuing_ca`
@@ -629,6 +670,8 @@ spec:
 
 The Vault Namespace, which is used to get the secret in the above example will be `my/root/ns/team1`.
 
+The operator can also be restricted to only reconcile secrets where the `spec.vaultNamespace` field is the same as the `VAULT_NAMESPACE` environment variable. For this the `VAULT_RESTRICT_NAMESPACE` environment variable must be set to `true`. When this feature is enabled the operator can not be used with nested namespaces.
+
 ### Propagating labels
 
 The operator will propagate all labels found on the `VaultSecret` to the actual secret. So if a given label is needed on the resulting secret it can be added like in the following example:
@@ -668,19 +711,20 @@ After modifying the `*_types.go` file always run the following command to update
 make generate
 ```
 
-The above makefile target will invoke the [controller-gen](https://sigs.k8s.io/controller-tools) utility to update the `api/v1alpha1/zz_generated.deepcopy.go` file to ensure our API's Go type definitons implement the `runtime.Object` interface that all Kind types must implement.
+The above Makefile target will invoke the [controller-gen](https://sigs.k8s.io/controller-tools) utility to update the
+`api/v1alpha1/zz_generated.deepcopy.go` file to ensure our API's Go type definitons implement the `runtime.Object`
+interface that all Kind types must implement.
 
-Once the API is defined with spec/status fields and CRD validation markers, the CRD manifests can be generated and updated with the following command:
+Once the API is defined with spec/status fields and CRD validation markers, the CRD manifests can be generated and
+updated with the following command:
 
 ```sh
 make manifests
 ```
 
-This makefile target will invoke controller-gen to generate the CRD manifests at `config/crd/bases/ricoberger.de_vaultsecrets.yaml`.
+This Makefile target will invoke controller-gen to generate the CRD manifest at `charts/vault-secrets-operator/crds/ricoberger.de_vaultsecrets.yaml`.
 
-### Locally
-
-Specify the Vault address, a token to access Vault and the TTL (in seconds) for the token:
+Deploy the CRD and run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
 
 ```sh
 export VAULT_ADDRESS=
@@ -688,41 +732,9 @@ export VAULT_AUTH_METHOD=token
 export VAULT_TOKEN=
 export VAULT_TOKEN_LEASE_DURATION=86400
 export VAULT_RECONCILIATION_TIME=180
+
+make run
 ```
-
-Deploy the CRD and run the operator locally with the default Kubernetes config file present at `$HOME/.kube/config`:
-
-```sh
-make install run
-```
-
-### Minikube
-
-Reuse Minikube's built-in Docker daemon:
-
-```sh
-eval $(minikube docker-env)
-```
-
-Build the Docker image for the operator:
-
-```sh
-make docker-build IMG=ricoberger/vault-secrets-operator:dev
-```
-
-Run the following to deploy the operator. This will also install the RBAC manifests from `config/rbac`.
-
-```sh
-make deploy IMG=ricoberger/vault-secrets-operator:dev
-```
-
-Deploy the Helm chart:
-
-```sh
-helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator --set vault.address="$VAULT_ADDRESS" --set image.repository="ricoberger/vault-secrets-operator" --set image.tag="dev"
-```
-
-For an example using [kind](https://kind.sigs.k8s.io) you can take a look at the `hack/setup-kind.sh` file.
 
 ## Links
 

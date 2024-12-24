@@ -11,7 +11,7 @@ kubectl create ns vault-secrets-operator
 
 # Install Vault in the cluster and create a new secret engine for the operator
 helm repo add hashicorp https://helm.releases.hashicorp.com
-helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.21.0 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.11.2"
+helm upgrade --install vault hashicorp/vault --namespace=vault --version=0.27.0 --set server.dev.enabled=true --set injector.enabled=false --set server.image.tag="1.16.1"
 
 sleep 10s
 kubectl wait pod/vault-0 --namespace=vault  --for=condition=Ready --timeout=180s
@@ -63,6 +63,8 @@ environmentVars:
       secretKeyRef:
         name: vault-secrets-operator
         key: VAULT_SECRET_ID
+serviceAccount:
+  createSecret: false
 EOF
 
 helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator -f ./values.yaml

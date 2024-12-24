@@ -5,7 +5,7 @@ on: pull_request
 jobs:
   kubernetes:
     name: Kubernetes
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         deployment:
@@ -14,12 +14,13 @@ jobs:
           - kubernetes-namespaced
           - approle-env-vars
           - approle-no-env-vars
+          - userpass
     defaults:
       run:
         shell: bash
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -47,30 +48,22 @@ jobs:
 
   go:
     name: Go
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
-          go-version: 1.19
-
-      - name: Cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
       - name: Download Dependencies
         run: |

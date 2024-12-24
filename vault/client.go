@@ -33,6 +33,8 @@ type Client struct {
 	requestToken RequestToken
 	// vault namespace
 	rootVaultNamespace string
+	// restrict the operator to the Vault namespace set in the rootVaultNamespace field
+	restrictNamespace bool
 	// failedRenewTokenAttempts is the number of failed renew token attempts, if the renew token function fails 5 times
 	// the liveness probe will fail, to force a restart of the operator.
 	failedRenewTokenAttempts int
@@ -99,9 +101,50 @@ func (c *Client) GetHealth(threshold int) error {
 	return nil
 }
 
+func (c *Client) IsNamespaceRestricted() (bool, string) {
+	return c.restrictNamespace, c.rootVaultNamespace
+}
+
+// GetSecret returns the value for a given secret.
+func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
+	// Get the secret for the given path and return the secret data.
+	log.Info(fmt.Sprintf("Read secret %s", path))
+
+	// Check if the vaultNamespace field is set for the secret. If the field is
+	// set we use the configured root namespace from the VAULT_NAMESPACE and
+	// the value from the vaultNamespace field to build the final namespace
+	// path. If the field is not set but VAULT_NAMESPACE has a value, we
+	// just use the latter.
+	// If the vaultNamespace field is set, but not the VAULT_NAMESPACE
+	// environment variable we return an error, because the authentication
+	// already failed.
+	if c.rootVaultNamespace != "" {
+		log.WithValues("rootVaultNamespace", c.rootVaultNamespace, "vaultNamespace", vaultNamespace).Info(fmt.Sprintf("Use Vault Namespace to read secret %s", path))
+		if vaultNamespace != "" && !c.restrictNamespace {
+			c.client.SetNamespace(c.rootVaultNamespace + "/" + vaultNamespace)
+		} else {
+			c.client.SetNamespace(c.rootVaultNamespace)
+		}
+	} else if c.rootVaultNamespace == "" && vaultNamespace != "" {
+		return nil, fmt.Errorf("vaultNamespace field can not be used, because the VAULT_NAMESPACE environment variable is not set")
+	}
+
+	// Check if the KVv1 or KVv2 is used for the provided secret and determin
+	// the mount path of the secrets engine.
+	mountPath, v2, err := c.isKVv2(path)
+	if err != nil {
+		return nil, err
+	}
+
+	expiresAt := time.Now().Add(time.Duration(secret.LeaseDuration) * time.Second)
+
+	return &expiresAt, nil
+}
+
 // RenewLease renews a secret lease and returns the time at which it will expire.
 func (c *Client) RenewLease(leaseId string, increment int) (*time.Time, error) {
 	secret, err := c.client.Sys().Renew(leaseId, increment)
+
 	if err != nil {
 		return nil, err
 	}

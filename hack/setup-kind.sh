@@ -18,9 +18,9 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
-  image: kindest/node:v1.24.0
+  image: kindest/node:v1.27.0
 - role: worker
-  image: kindest/node:v1.24.0
+  image: kindest/node:v1.27.0
 containerdConfigPatches:
 - |-
   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${reg_port}"]

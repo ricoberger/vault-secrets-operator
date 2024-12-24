@@ -18,27 +18,27 @@ kubectl wait pod/vault-0 --namespace=vault  --for=condition=Ready --timeout=180s
 kubectl port-forward --namespace vault vault-0 8200 &
 sleep 10s
 
-vault login root
-vault secrets enable -path=kvv2 -version=2 kv
-cat <<EOF | vault policy write vault-secrets-operator -
+vault login -address="http://127.0.0.1:8200" root
+vault secrets enable -path=kvv2 -version=2 -address="http://127.0.0.1:8200" kv
+cat <<EOF | vault policy write -address="http://127.0.0.1:8200" vault-secrets-operator -
 path "kvv2/data/*" {
   capabilities = ["read"]
 }
 EOF
 
-# Enable Vault AppRole auth method
-vault auth enable approle
+# Enable Vault UserPass auth method
+vault auth enable -address="http://127.0.0.1:8200" userpass
 
-# Create new AppRole
-vault write auth/approle/role/vault-secrets-operator token_policies=vault-secrets-operator
+# Create new User
+vault write -address="http://127.0.0.1:8200" auth/userpass/users/test password=1234 policies=vault-secrets-operator
 
-# Get AppRole ID and secret ID
-VAULT_ROLE_ID=$(vault read auth/approle/role/vault-secrets-operator/role-id -format=json | jq -r .data.role_id)
-VAULT_SECRET_ID=$(vault write -f auth/approle/role/vault-secrets-operator/secret-id -format=json | jq -r .data.secret_id)
+# Set user and password
+VAULT_USER="test"
+VAULT_PASSWORD="1234"
 
 cat <<EOF > ./vault-secrets-operator.env
-VAULT_ROLE_ID=$VAULT_ROLE_ID
-VAULT_SECRET_ID=$VAULT_SECRET_ID
+VAULT_USER=$VAULT_USER
+VAULT_PASSWORD=$VAULT_PASSWORD
 EOF
 
 kubectl create secret generic vault-secrets-operator \
@@ -48,42 +48,28 @@ kubectl create secret generic vault-secrets-operator \
 cat <<EOF > ./values.yaml
 vault:
   address: http://vault.vault.svc.cluster.local:8200
-  authMethod: approle
+  authMethod: userpass
 image:
   repository: localhost:5000/vault-secrets-operator
   tag: test
-  volumeMounts:
-    - name: vault-role-id
-      mountPath: "/etc/vault/role/"
-      readOnly: true
-    - name: vault-secret-id
-      mountPath: "/etc/vault/secret/"
-      readOnly: true
 environmentVars:
-  - name: VAULT_ROLE_ID_PATH
-    value: "/etc/vault/role/id"
-  - name: VAULT_SECRET_ID_PATH
-    value: "/etc/vault/secret/id"
-volumes:
-  - name: vault-role-id
-    secret:
-      secretName: vault-secrets-operator
-      items:
-        - key: VAULT_ROLE_ID
-          path: "id"
-  - name: vault-secret-id
-    secret:
-      secretName: vault-secrets-operator
-      items:
-        - key: VAULT_SECRET_ID
-          path: "id"
+  - name: VAULT_USER
+    valueFrom:
+      secretKeyRef:
+        name: vault-secrets-operator
+        key: VAULT_USER
+  - name: VAULT_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: vault-secrets-operator
+        key: VAULT_PASSWORD
 serviceAccount:
   createSecret: false
 EOF
 
 helm upgrade --install vault-secrets-operator ./charts/vault-secrets-operator --namespace=vault-secrets-operator -f ./values.yaml
 
-vault kv put kvv2/helloworld foo=bar
+vault kv put -address="http://127.0.0.1:8200" kvv2/helloworld foo=bar
 
 cat <<EOF | kubectl apply -f -
 apiVersion: ricoberger.de/v1alpha1

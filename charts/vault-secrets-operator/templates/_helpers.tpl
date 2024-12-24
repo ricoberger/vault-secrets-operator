@@ -97,6 +97,18 @@ Additional containers to add to the deployment
 {{- end -}}
 
 {{/*
+initContainers to add to the deployment. Example:
+- name: my-init-container
+  image: busy-box
+  command:
+    - sh
+    - -c
+    - my-command; my-other-command
+*/}}
+{{- define "vault-secrets-operator.initContainers" -}}
+{{- end -}}
+
+{{/*
 Helper function for checking if a property is defined
 */}}
 {{- define "vault-secrets-operator.imageRef" -}}
