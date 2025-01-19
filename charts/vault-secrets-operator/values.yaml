@@ -3,7 +3,7 @@ deploymentStrategy: {}
 
 image:
   repository: ghcr.io/ricoberger/vault-secrets-operator
-  tag: v1.25.1
+  tag: v1.26.0
   # digest: sha256:7246830da1852a7417cccc1092beecdf524d9eb9fb7b29aabcf10796cccb3def
 
   pullPolicy: IfNotPresent
