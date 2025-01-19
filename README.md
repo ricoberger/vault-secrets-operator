@@ -14,10 +14,7 @@ The **Vault Secrets Operator** creates Kubernetes secrets from Vault. The idea b
 The Vault Secrets Operator can be installed via Helm. A list of all configurable values can be found [here](./charts/README.md). The chart assumes a vault server running at `http://vault:8200`, but can be overidden by specifying `--set vault.address=https://vault.example.com`
 
 ```sh
-helm repo add ricoberger https://ricoberger.github.io/helm-charts
-helm repo update
-
-helm upgrade --install vault-secrets-operator ricoberger/vault-secrets-operator
+helm upgrade --install vault-secrets-operator oci://ghcr.io/ricoberger/charts/vault-secrets-operator --version 3.0.0
 ```
 
 ### Prepare Vault
