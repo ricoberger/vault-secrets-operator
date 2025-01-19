@@ -1,3 +1,4 @@
+---
 name: Continuous Delivery
 
 on:
@@ -55,7 +56,7 @@ jobs:
           push: true
           context: .
           file: ./Dockerfile
-          platforms: linux/386,linux/amd64,linux/arm/v7,linux/arm64/v8
+          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
