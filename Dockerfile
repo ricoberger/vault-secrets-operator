@@ -5,8 +5,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -a -o manager main.go
 
-FROM alpine:3.21.0
-RUN apk update && apk add --no-cache ca-certificates
+FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER nobody
