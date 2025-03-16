@@ -3,11 +3,12 @@ deploymentStrategy: {}
 
 image:
   repository: ghcr.io/ricoberger/vault-secrets-operator
-  tag: v1.26.0
+  tag: v1.26.1
   # digest: sha256:7246830da1852a7417cccc1092beecdf524d9eb9fb7b29aabcf10796cccb3def
 
   pullPolicy: IfNotPresent
-  volumeMounts: []
+  volumeMounts:
+    []
     # - name: ca
     #   mountPath: "/etc/vault-secrets-operator"
 
@@ -18,7 +19,8 @@ fullnameOverride: ""
 args:
   - -leader-elect
 
-environmentVars: []
+environmentVars:
+  []
   # Set environment variables from a secret. This must be done, if you use the
   # Token or AppRole Auth Methods of Vault.
 
@@ -130,7 +132,8 @@ testPodLabels: {}
 # Whether to include the 'vault-secrets-operator.initContainers' template in the deployment template spec
 includeInitContainers: false
 
-resources: {}
+resources:
+  {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -142,7 +145,8 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
-volumes: []
+volumes:
+  []
   # - name: ca
   #   secret:
   #     secretName: vault-secrets-operator-ca
@@ -190,7 +194,8 @@ serviceMonitor:
 
 networkPolicy:
   enabled: false
-  egress: []
+  egress:
+    []
     # - to:
     #     - ipBlock:
     #       cidr: 10.0.0.0/24
@@ -201,7 +206,8 @@ networkPolicy:
 ## Topology spread constraints rely on node labels to identify the topology domain(s) that each Node is in.
 ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
 ##
-topologySpreadConstraints: []
+topologySpreadConstraints:
+  []
   # - maxSkew: 1
   #   topologyKey: topology.kubernetes.io/zone
   #   whenUnsatisfiable: DoNotSchedule

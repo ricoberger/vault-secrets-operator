@@ -1,6 +1,7 @@
 module github.com/ricoberger/vault-secrets-operator
 
 go 1.24.0
+
 require (
 	cloud.google.com/go/compute/metadata v0.6.0
 	cloud.google.com/go/iam v1.4.2
