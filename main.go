@@ -91,7 +91,13 @@ func main() {
 		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
+	config := ctrl.GetConfigOrDie()
+	// Disable client-side ratelimer by default, we can rely on
+	// API priority and fairness
+	// https://github.com/kubernetes-sigs/controller-runtime/blob/main/pkg/client/config/config.go#L110
+	config.QPS = -1
+
+	mgr, err := ctrl.NewManager(config, options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
