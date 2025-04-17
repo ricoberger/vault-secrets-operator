@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/hashicorp/vault/api"
 	"os"
 	"text/template"
 	"time"
+
+	"github.com/hashicorp/vault/api"
 
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
 	"github.com/ricoberger/vault-secrets-operator/vault"
@@ -20,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -288,6 +290,9 @@ func ignorePredicate() predicate.Predicate {
 // SetupWithManager sets up the controller with the Manager.
 func (r *VaultSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 6, // We launch a dice, it want to 6
+		}).
 		For(&ricobergerdev1alpha1.VaultSecret{}).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(ignorePredicate()).
