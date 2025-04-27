@@ -65,8 +65,8 @@ Additional pod annotations
 Additional test-connection pod annotations
 */}}
 {{- define "vault-secrets-operator.testPodAnnotations" -}}
-{{- if .Values.testPodAnnotations }}
-{{- toYaml .Values.testPodAnnotations }}
+{{- if .Values.tests.podAnnotations }}
+{{- toYaml .Values.tests.podAnnotations }}
 {{- end }}
 {{- end }}
 
@@ -74,8 +74,8 @@ Additional test-connection pod annotations
 Additional test-connection pod labels
 */}}
 {{- define "vault-secrets-operator.testPodLabels" -}}
-{{- if .Values.testPodLabels }}
-{{- toYaml .Values.testPodLabels }}
+{{- if .Values.tests.podLabels }}
+{{- toYaml .Values.tests.podLabels }}
 {{- end }}
 {{- end }}
 
@@ -115,6 +115,6 @@ Helper function for checking if a property is defined
 {{- if .Values.image.digest -}}
     @{{ .Values.image.digest }}
 {{- else -}}
-    :{{ .Values.image.tag }}
+    :{{ .Values.image.tag | default .Chart.AppVersion }}
 {{- end -}}
 {{- end -}}
