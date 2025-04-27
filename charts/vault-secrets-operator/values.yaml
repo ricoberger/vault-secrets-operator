@@ -3,8 +3,13 @@ deploymentStrategy: {}
 
 image:
   repository: ghcr.io/ricoberger/vault-secrets-operator
-  tag: v1.26.1
-  # digest: sha256:7246830da1852a7417cccc1092beecdf524d9eb9fb7b29aabcf10796cccb3def
+  ## Overrides the image tag whose default is the chart appVersion.
+  ##
+  tag: ""
+  ## Use image digest instead of the "appVersion" / "tag", e.g.
+  ## "sha256:7246830da1852a7417cccc1092beecdf524d9eb9fb7b29aabcf10796cccb3def"
+  ##
+  digest: ""
 
   pullPolicy: IfNotPresent
   volumeMounts:
@@ -21,10 +26,11 @@ args:
 
 environmentVars:
   []
-  # Set environment variables from a secret. This must be done, if you use the
-  # Token or AppRole Auth Methods of Vault.
-
-  # Token auth method:
+  ## Set environment variables from a secret. This must be done, if you use the
+  ## Token or AppRole Auth Methods of Vault.
+  ##
+  ## Token auth method:
+  ##
   # - name: VAULT_TOKEN
   #   valueFrom:
   #     secretKeyRef:
@@ -38,8 +44,9 @@ environmentVars:
   #   value: "43200"
   # - name: VAULT_TOKEN_RENEWAL_RETRY_INTERVAL
   #   value: "30"
-
-  # AppRole auth method:
+  ##
+  ## AppRole auth method:
+  ##
   # - name: VAULT_ROLE_ID_PATH
   #   value: "/etc/vault/role/id"
   # - name: VAULT_SECRET_ID_PATH
@@ -49,35 +56,35 @@ environmentVars:
   # - name: VAULT_TOKEN_MAX_TTL
   #   value: "43200"
 
-# Set the address for vault (by default we assume you are running a dev
-# instance of vault in the same namespace as the operator) and specify the
-# authentication method for the operator.  Possible values are 'token',
-# 'kubernetes', or 'approle'.
-
-# If the authentication method is 'kubernetes' the Helm chart
-# ensures that the Service Account included the needed rights. The default path
-# for the Kubernets Auth method is 'auth/kubernetes', if you enabled it under
-# another path you must change the 'kubernetesPath' value. You must also
-# provide the role which should be used for the authentication.
-#
-# If the auth method is 'token' you can specify the 'tokenPath' to read the
-# Vault token from a mounted volume instead of an environment variable.
-#
-# If the auth method is 'approle' you must specify a path for the AppRole Auth
-# method with 'appRolePath', by default it is 'auth/approle'. Also
-# 'VAULT_ROLE_ID_PATH' and 'VAULT_SECRET_ID_PATH' must be set for this auth method. With
-# this method, the renewal interval is set by default to a half of the token
-# lease duration (can be overwritten with 'VAULT_TOKEN_RENEWAL_INTERVAL'), the
-# token maximum TTL is set by default to 1382400 seconds (16 days, can be
-# overwritten with 'VAULT_TOKEN_MAX_TTL').
-#
-# The reconciliationTime value determines after which time the Vault secret is
-# processed again. This can be used to update a the Kubernetes secret, when the
-# Vault secret changes. A value of 0 will disable the automatic update.
-# You can specify all namespaces the operator should watch. Therefore pass a
-# comma separated list via the namespaces value. If the value is empty the operator
-# will watch all namespaces. If the value is empty and rbac.namespaced is set to
-# true, then the namespace of the release will be used.
+## Set the address for vault (by default we assume you are running a dev
+## instance of vault in the same namespace as the operator) and specify the
+## authentication method for the operator.  Possible values are 'token',
+## 'kubernetes', or 'approle'.
+##
+## If the authentication method is 'kubernetes' the Helm chart
+## ensures that the Service Account included the needed rights. The default path
+## for the Kubernets Auth method is 'auth/kubernetes', if you enabled it under
+## another path you must change the 'kubernetesPath' value. You must also
+## provide the role which should be used for the authentication.
+##
+## If the auth method is 'token' you can specify the 'tokenPath' to read the
+## Vault token from a mounted volume instead of an environment variable.
+##
+## If the auth method is 'approle' you must specify a path for the AppRole Auth
+## method with 'appRolePath', by default it is 'auth/approle'. Also
+## 'VAULT_ROLE_ID_PATH' and 'VAULT_SECRET_ID_PATH' must be set for this auth
+## method. With this method, the renewal interval is set by default to a half of
+## the token lease duration (can be overwritten with
+## 'VAULT_TOKEN_RENEWAL_INTERVAL'), the token maximum TTL is set by default to
+## 1382400 seconds (16 days, can be overwritten with 'VAULT_TOKEN_MAX_TTL').
+##
+## The reconciliationTime value determines after which time the Vault secret is
+## processed again. This can be used to update a the Kubernetes secret, when the
+## Vault secret changes. A value of 0 will disable the automatic update.
+## You can specify all namespaces the operator should watch. Therefore pass a
+## comma separated list via the namespaces value. If the value is empty the
+## operator will watch all namespaces. If the value is empty and rbac.namespaced
+## is set to true, then the namespace of the release will be used.
 vault:
   address: ""
   header: ""
@@ -107,37 +114,41 @@ rbac:
 serviceAccount:
   create: true
   name: vault-secrets-operator
-  # Starting with Kubernetes 1.24 service account tokens are no longer autogenerated for every ServiceAccount. To create
-  # the secret via the Helm chart we set the `createSecret` value to `true`.
-  # If you are using Kubernetes 1.23 or below you can set this value to `false` and the secret will be created by
-  # Kubernetes.
+  ## Starting with Kubernetes 1.24 service account tokens are no longer
+  ## autogenerated for every ServiceAccount. To create the secret via the Helm
+  ## chart we set the `createSecret` value to `true`.
+  ##
+  ## If you are using Kubernetes 1.23 or below you can set this value to `false`
+  ## and the secret will be created by
+  ## Kubernetes.
+  ##
   createSecret: true
 
-# Annotations for vault-secrets-operator pod(s).
+## Annotations for vault-secrets-operator pod(s).
+##
 podAnnotations: {}
 
-# Additional labels for the vault-secrets-operator pod(s).
+## Additional labels for the vault-secrets-operator pod(s).
+##
 podLabels: {}
 
 podSecurityContext: {}
 
 securityContext: {}
 
-# Annotations for the vault-secrets-operator-test-connection pod
-testPodAnnotations: {}
-
-# Additional labels for the vault-secrets-operator-test-connection pod
-testPodLabels: {}
-
-# Whether to include the 'vault-secrets-operator.initContainers' template in the deployment template spec
+## Whether to include the 'vault-secrets-operator.initContainers' template in
+## the deployment template spec
+##
 includeInitContainers: false
 
 resources:
   {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  ## We usually recommend not to specify default resources and to leave this as
+  ## a conscious choice for the user. This also increases chances charts run on
+  ## environments with little resources, such as Minikube. If you do want to
+  ## specify resources, uncomment the following lines, adjust them as necessary,
+  ## and remove the curly braces after 'resources:'.
+  ##
   # limits:
   #   cpu: 100m
   #   memory: 128Mi
@@ -180,16 +191,21 @@ serviceMonitor:
   honorLabels: true
   relabelings: []
 
-# A priority class can be optionally attached to the pod spec if one is needed
+## A priority class can be optionally attached to the pod spec if one is needed
+##
 # priorityClassName: high
 
-# A dnsConfig can be optionally attached to the pod spec and test pod spec if one is needed
+## A dnsConfig can be optionally attached to the pod spec and test pod spec if
+## one is needed
+##
 #dnsConfig:
 #  nameservers: []
 #  searches: []
 #  options: []
 
-# A dnsPolicy can be optionally attached to the pod spec and test pod spec if one is needed
+## A dnsPolicy can be optionally attached to the pod spec and test pod spec if
+## one is needed
+##
 # dnsPolicy: None
 
 networkPolicy:
@@ -203,7 +219,8 @@ networkPolicy:
     #     - port: 443
     #       protocol: TCP
 
-## Topology spread constraints rely on node labels to identify the topology domain(s) that each Node is in.
+## Topology spread constraints rely on node labels to identify the topology
+## domain(s) that each Node is in.
 ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
 ##
 topologySpreadConstraints:
@@ -216,6 +233,14 @@ topologySpreadConstraints:
   #       app.kubernetes.io/name=vault-secrets-operator
 
 tests:
+  ## Annotations for the vault-secrets-operator-test-connection pod
+  ##
+  podAnnotations: {}
+
+  ## Additional labels for the vault-secrets-operator-test-connection pod
+  ##
+  podLabels: {}
+
   # imagePullSecrets:
   # - imagePullSecret
   busybox:
