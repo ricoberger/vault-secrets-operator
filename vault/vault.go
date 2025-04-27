@@ -6,13 +6,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strconv"
 	"time"
 
 	gcpmetadata "cloud.google.com/go/compute/metadata"
 	gcpcredentials "cloud.google.com/go/iam/credentials/apiv1"
+	gcpcredentialspb "cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	"github.com/aws/aws-sdk-go/aws"
 	awscredentials "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
@@ -26,7 +27,6 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
-	gcpcredentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -143,7 +143,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				return nil, fmt.Errorf("missing vault token")
 			}
 
-			t, err := ioutil.ReadFile(vaultTokenPath)
+			t, err := os.ReadFile(vaultTokenPath)
 			if err != nil {
 				return nil, err
 			}
@@ -199,6 +199,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			return nil, nil
 		}
 
+		// #nosec G101
 		serviceAccountTokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
 		if vaultTokenPath != "" {
@@ -207,7 +208,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		// Read the service account token value and create a map for the
 		// authentication against Vault.
-		kubeToken, err := ioutil.ReadFile(serviceAccountTokenPath)
+		kubeToken, err := os.ReadFile(serviceAccountTokenPath)
 		if err != nil {
 			return nil, err
 		}
@@ -478,7 +479,6 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			restrictNamespace:         vaultRestrictNamespace,
 			pkiRenew:                  pkiRenew,
 		}, nil
-
 	}
 
 	if vaultAuthMethod == "aws" {
@@ -508,7 +508,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 					return nil, fmt.Errorf("error requesting signature: %w", err)
 				}
 
-				kubeToken, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+				kubeToken, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 				if err != nil {
 					return nil, err
 				}
@@ -539,7 +539,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 					if err != nil {
 						return nil, errors.Wrap(err, "error creating a new session to create a WebIdentityRoleProvider")
 					}
-					webIdentityProvider := stscreds.NewWebIdentityRoleProvider(sts.New(sess), roleARN, roleSessionName, tokenPath)
+					webIdentityProvider := stscreds.NewWebIdentityRoleProviderWithOptions(sts.New(sess), roleARN, roleSessionName, stscreds.FetchTokenPath(tokenPath))
 
 					// Add the web identity role credential provider
 					providers = append(providers, webIdentityProvider)
@@ -582,7 +582,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				if err != nil {
 					return nil, err
 				}
-				requestBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
+				requestBody, err := io.ReadAll(stsRequest.HTTPRequest.Body)
 				if err != nil {
 					return nil, err
 				}
@@ -672,7 +672,6 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	}
 
 	if vaultAuthMethod == "gcp" {
-
 		// Check the required mount path and role for the GCP Auth
 		// Method. If one of the env variable is missing we return an error.
 		if vaultGcpPath == "" {
@@ -711,7 +710,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 				if vaultGcpServiceAccountEmail == "" {
 					metadataClient := gcpmetadata.NewClient(nil)
-					vaultGcpServiceAccountEmail, err = metadataClient.Email("default")
+					vaultGcpServiceAccountEmail, err = metadataClient.EmailWithContext(context.Background(), "default")
 					if err != nil {
 						return nil, fmt.Errorf("could not obtain service account from credentials; a service account to authenticate as must be provided")
 					}
@@ -842,7 +841,7 @@ func setVaultIDs(idType string) string {
 		idPath = os.Getenv("VAULT_SECRET_ID_PATH")
 	}
 
-	id, err := ioutil.ReadFile(idPath)
+	id, err := os.ReadFile(idPath)
 	if err != nil {
 		log.WithValues("VaultFilePath", idPath).Error(err, "missing secret vault-secrets-operator or bad path in volume")
 		return string(id)
