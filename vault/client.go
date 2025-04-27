@@ -65,7 +65,7 @@ func (c *Client) RenewToken() {
 
 		// Request a new token if the actual token lifetime more than the specified maximum
 		// lifetime.
-		elapsed := time.Now().Sub(started).Seconds()
+		elapsed := time.Since(started).Seconds()
 		if c.tokenMaxTTL > 0 && elapsed >= float64(c.tokenMaxTTL) && c.requestToken != nil {
 			log.Info("Request new Vault token")
 			err := c.requestToken(c)
@@ -97,7 +97,7 @@ func (c *Client) RenewToken() {
 // GetHealth checks if the failedRenewTokenAttempts hits the given thresholds. If this is the case an error is returned.
 func (c *Client) GetHealth(threshold int) error {
 	if c.failedRenewTokenAttempts >= threshold {
-		return fmt.Errorf("Renew Vault token failed %d times", c.failedRenewTokenAttempts)
+		return fmt.Errorf("renew Vault token failed %d times", c.failedRenewTokenAttempts)
 	}
 
 	return nil
@@ -214,7 +214,7 @@ func convertData(secretData map[string]interface{}, keys []string, isBinary bool
 			continue
 		}
 		if len(keys) == 0 || contains(key, keys) {
-			switch value.(type) {
+			switch value := value.(type) {
 			case map[string]interface{}:
 				jsonString, err := json.Marshal(value)
 				if err != nil {
@@ -223,17 +223,17 @@ func convertData(secretData map[string]interface{}, keys []string, isBinary bool
 				data[key] = []byte(jsonString)
 			case string:
 				if isBinary {
-					data[key], err = b64.StdEncoding.DecodeString(value.(string))
+					data[key], err = b64.StdEncoding.DecodeString(value)
 					if err != nil {
 						return nil, err
 					}
 				} else {
-					data[key] = []byte(value.(string))
+					data[key] = []byte(value)
 				}
 			case json.Number:
-				data[key] = []byte(value.(json.Number))
+				data[key] = []byte(value)
 			case bool:
-				data[key] = []byte(fmt.Sprintf("%t", value.(bool)))
+				data[key] = []byte(fmt.Sprintf("%t", value))
 			default:
 				return nil, fmt.Errorf("could not parse secret value")
 			}
@@ -257,8 +257,7 @@ func (c *Client) kvPreflightVersionRequest(path string) (string, int, error) {
 	c.client.SetOutputCurlString(false)
 	defer c.client.SetOutputCurlString(currentOutputCurlString)
 
-	r := c.client.NewRequest("GET", "/v1/sys/internal/ui/mounts/"+path)
-	resp, err := c.client.RawRequest(r)
+	resp, err := c.client.Logical().ReadRaw("sys/internal/ui/mounts/" + path)
 	if resp != nil {
 		defer resp.Body.Close()
 	}

@@ -150,7 +150,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
-	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == kvEngine {
+	switch instance.Spec.SecretEngine {
+	case "", kvEngine:
 		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
@@ -158,7 +159,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
-	} else if instance.Spec.SecretEngine == pkiEngine {
+
+	case pkiEngine:
 		if err := ValidatePKI(instance); err != nil {
 			log.Error(err, "Resource validation failed")
 			r.updateConditions(ctx, instance, conditionReasonInvalidResource, err.Error(), metav1.ConditionFalse)
@@ -408,8 +410,8 @@ func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        cr.Name,
 			Namespace:   cr.Namespace,
-			Labels:      cr.ObjectMeta.Labels,
-			Annotations: cr.ObjectMeta.Annotations,
+			Labels:      cr.Labels,
+			Annotations: cr.Annotations,
 		},
 		Data: data,
 		Type: cr.Spec.Type,

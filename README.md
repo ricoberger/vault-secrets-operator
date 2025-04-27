@@ -28,7 +28,7 @@ running at `http://vault:8200`, but can be overidden by specifying
 `--set vault.address=https://vault.example.com`
 
 ```sh
-helm upgrade --install vault-secrets-operator oci://ghcr.io/ricoberger/charts/vault-secrets-operator --version 3.0.0
+helm upgrade --install vault-secrets-operator oci://ghcr.io/ricoberger/charts/vault-secrets-operator --version <VERSION>
 ```
 
 ### Prepare Vault
