@@ -1,16 +1,18 @@
-name: Continuous Delivery
+# TODO: use CircleCI instead ?
+name: Build & Push to Padoa ACR
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - main
+      - master
+      - fix/database-engine-msi-perf
     tags:
-      - '*'
+      - "*"
 
 jobs:
-  docker:
-    name: Docker
-    runs-on: ubuntu-20.04
+  build-push:
+    runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash
@@ -20,34 +22,34 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set Docker Tag
-        id: tag
-        run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            DOCKER_TAG="${GITHUB_REF:10}"
-          else
-            DOCKER_TAG="main"
-          fi
-          echo ::set-output name=tag::${DOCKER_TAG}
+      - name: Login to ACR
+        uses: azure/docker-login@v2
+        with:
+          login-server: padoa.azurecr.io
+          username: ${{ secrets.ACR_PUSH_USER }}
+          password: ${{ secrets.ACR_PUSH_PASSWORD }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          platforms: linux/amd64
+
+      - name: Compute Tags
+        run: |
+          TAGS="padoa.azurecr.io/padoa-tools/vault-secrets-operator:${{ github.sha }}"
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            TAGS="$TAGS,padoa.azurecr.io/padoa-tools/vault-secrets-operator:${GITHUB_REF:10}"
+          fi
+          echo TAGS="$TAGS" >> $GITHUB_ENV
 
       - name: Build and Push Docker Image
-        id: docker_build
         uses: docker/build-push-action@v3
         with:
           push: true
           context: .
           file: ./Dockerfile
-          platforms: linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8
-          tags: ricoberger/vault-secrets-operator:${{ steps.tag.outputs.tag }}
+          platforms: linux/amd64
+          tags: ${{ env.TAGS }}
