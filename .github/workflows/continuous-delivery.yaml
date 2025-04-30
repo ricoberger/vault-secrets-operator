@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - master
+      # TODO: remove this once merged
       - fix/database-engine-msi-perf
     tags:
       - "*"
@@ -42,6 +43,9 @@ jobs:
           TAGS="padoa.azurecr.io/padoa-tools/vault-secrets-operator:${{ github.sha }}"
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             TAGS="$TAGS,padoa.azurecr.io/padoa-tools/vault-secrets-operator:${GITHUB_REF:10}"
+          fi
+          if [[ $GITHUB_REF == refs/heads/master || $GITHUB_REF == refs/heads/fix/database-engine-msi-perf ]]; then
+            TAGS="$TAGS,padoa.azurecr.io/padoa-tools/vault-secrets-operator:master"
           fi
           echo TAGS="$TAGS" >> $GITHUB_ENV
 

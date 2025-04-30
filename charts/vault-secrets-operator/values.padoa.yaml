@@ -15,8 +15,8 @@ vault:
   reconciliationTime: 1800
 
 image:
-  repository: padoa.azurecr.io/padoa/vault-secrets-operator
-  tag: fix/database-engine-msi-perf
+  repository: padoa.azurecr.io/padoa-tools/vault-secrets-operator
+  tag: master
   pullPolicy: Always
 
 serviceMonitor:
