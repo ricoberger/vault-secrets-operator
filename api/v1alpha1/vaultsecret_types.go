@@ -56,6 +56,8 @@ type VaultSecretSpec struct {
 	// get double encoded. This flag will skip the base64 encode which is needed
 	// for string data to avoid the double encode problem.
 	IsBinary bool `json:"isBinary,omitempty"`
+	// RestartOnChange specifies the resource to restart when the secret changes
+	RestartOnChange *RestartOnChangeSpec `json:"restartOnChange,omitempty"`
 }
 
 // VaultSecretStatus defines the observed state of VaultSecret
@@ -88,6 +90,15 @@ type VaultSecretList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []VaultSecret `json:"items"`
+}
+
+type RestartOnChangeSpec struct {
+	// Kind of the resource to restart (e.g., Deployment, StatefulSet)
+	// +kubebuilder:validation:Enum=Deployment;StatefulSet
+	Kind string `json:"kind"`
+
+	// Name of the resource to restart
+	Name string `json:"name"`
 }
 
 func init() {
