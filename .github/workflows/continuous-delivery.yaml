@@ -44,7 +44,7 @@ jobs:
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             TAGS="$TAGS,padoa.azurecr.io/padoa-tools/vault-secrets-operator:${GITHUB_REF:10}"
           fi
-          if [[ $GITHUB_REF == refs/heads/master || $GITHUB_REF == refs/heads/fix/database-engine-msi-perf ]]; then
+          if [[ $GITHUB_REF == refs/heads/master ]]; then
             TAGS="$TAGS,padoa.azurecr.io/padoa-tools/vault-secrets-operator:master"
           fi
           echo TAGS="$TAGS" >> $GITHUB_ENV
