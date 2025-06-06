@@ -5,6 +5,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type SecretEngine string
+
+const (
+	KVEngine       SecretEngine = "kv"
+	PKIEngine      SecretEngine = "pki"
+	DatabaseEngine SecretEngine = "database"
+)
+
 // VaultSecretSpec defines the desired state of VaultSecret
 type VaultSecretSpec struct {
 	// VaultRole can be used to specify the Vault role, which should be used to get the secret from Vault. If the
@@ -19,6 +27,9 @@ type VaultSecretSpec struct {
 	// existing data keys in a secret with the loaded keys from Vault. The second valid value is "Merge" wiche merges
 	// the loaded keys from Vault with the existing keys in a secret. Duplicated keys will be replaced with the value
 	// from Vault. Other values are not valid for this field.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=Merge;Replace
+	// +kubebuilder:default:=Replace
 	ReconcileStrategy string `json:"reconcileStrategy,omitempty"`
 	// Keys is an array of Keys, which should be included in the Kubernetes
 	// secret. If the Keys field is ommitted all keys from the Vault secret will
@@ -30,15 +41,14 @@ type VaultSecretSpec struct {
 	Templates map[string]string `json:"templates,omitempty"`
 	// Path is the path of the corresponding secret in Vault.
 	Path string `json:"path"`
-	// SecretEngine specifies the type of the Vault secret engine in which the
-	// secret is stored. Currently the 'KV Secrets Engine - Version 1' and
-	// 'KV Secrets Engine - Version 2' are supported. The value must be 'kv'. If
-	// the value is omitted or an other values is used the Vault Secrets
-	// Operator will try to use the KV secret engine.
-	SecretEngine string `json:"secretEngine,omitempty"`
+	// SecretEngine specifies the type of the Vault secret engine to use.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=kv;pki;database
+	// +kubebuilder:default:=kv
+	SecretEngine SecretEngine `json:"secretEngine,omitempty"`
 	// EngineOptions specifies options for the engine.
 	EngineOptions map[string]string `json:"engineOptions,omitempty"`
-	// Role specifies the role to use with PKI engine
+	// Role specifies the role to use with PKI and Database engines
 	Role string `json:"role,omitempty"`
 	// Type is the type of the Kubernetes secret, which will be created by the
 	// Vault Secrets Operator.
@@ -70,6 +80,7 @@ type VaultSecretStatus struct {
 // +kubebuilder:printcolumn:name="Succeeded",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].status`,description="Indicates if the secret was created/updated successfully"
 // +kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].reason`,description="Reason for the current status"
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].message`,description="Message with more information, regarding the current status"
+// +kubebuilder:printcolumn:name="Expires At",type=string,JSONPath=`.status.expiresAt`,description="Secret expiration time"
 // +kubebuilder:printcolumn:name="Last Transition",type=date,JSONPath=`.status.conditions[?(@.type=="SecretCreated")].lastTransitionTime`,description="Time when the condition was updated the last time"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Time when this VaultSecret was created"
 // +kubebuilder:subresource:status

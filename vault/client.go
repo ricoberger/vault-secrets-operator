@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 
@@ -40,8 +39,10 @@ type Client struct {
 	// failedRenewTokenAttempts is the number of failed renew token attempts, if the renew token function fails 5 times
 	// the liveness probe will fail, to force a restart of the operator.
 	failedRenewTokenAttempts int
-	// pkiRenew minimum remaining period of validity before certificate renewal
-	pkiRenew time.Duration
+	// PKIRenew minimum remaining period of validity before certificate renewal
+	PKIRenew time.Duration
+	// DatabaseRenew is the minimum remaining period of validity before credential renewal
+	DatabaseRenew time.Duration
 }
 
 // PerformRenewToken returns whether the operator should renew its token
@@ -101,86 +102,20 @@ func (c *Client) GetHealth(threshold int) error {
 	return nil
 }
 
-// GetSecret returns the value for a given secret.
-func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
-	// Get the secret for the given path and return the secret data.
-	log.Info(fmt.Sprintf("Read secret %s", path))
-
-	// Check if the vaultNamespace field is set for the secret. If the field is
-	// set we use the configured root namespace from the VAULT_NAMESPACE and
-	// the value from the vaultNamespace field to build the final namespace
-	// path. If the field is not set but VAULT_NAMESPACE has a value, we
-	// just use the latter.
-	// If the vaultNamespace field is set, but not the VAULT_NAMESPACE
-	// environment variable we return an error, because the authentication
-	// already failed.
-	if c.rootVaultNamespace != "" {
-		log.WithValues("rootVaultNamespace", c.rootVaultNamespace, "vaultNamespace", vaultNamespace).Info(fmt.Sprintf("Use Vault Namespace to read secret %s", path))
-		if vaultNamespace != "" {
-			c.client.SetNamespace(c.rootVaultNamespace + "/" + vaultNamespace)
-		} else {
-			c.client.SetNamespace(c.rootVaultNamespace)
-		}
-	} else if c.rootVaultNamespace == "" && vaultNamespace != "" {
-		return nil, fmt.Errorf("vaultNamespace field can not be used, because the VAULT_NAMESPACE environment variable is not set")
-	}
-
-	// Check if the KVv1 or KVv2 is used for the provided secret and determin
-	// the mount path of the secrets engine.
-	mountPath, v2, err := c.isKVv2(path)
+// RenewLease renews a secret lease and returns the time at which it will expire.
+func (c *Client) RenewLease(leaseId string, increment int) (*time.Time, error) {
+	secret, err := c.client.Sys().Renew(leaseId, increment)
 	if err != nil {
 		return nil, err
 	}
 
-	// If the KVv2 secrets engine is used we add the 'data' prefix to the
-	// secrets path. If a version is provided we fill the request data with the
-	// version parameter.
-	// NOTE: Without any request data the ReadWithData method will act like the
-	// Read method.
-	reqData := make(map[string][]string)
+	expiresAt := time.Now().Add(time.Duration(secret.LeaseDuration) * time.Second)
 
-	if v2 {
-		path = c.addPrefixToVKVPath(path, mountPath, "data")
+	return &expiresAt, nil
+}
 
-		if version > 0 {
-			reqData["version"] = []string{strconv.Itoa(version)}
-		}
-	}
-
-	secret, err := c.client.Logical().ReadWithData(path, reqData)
-	if err != nil {
-		return nil, err
-	}
-
-	if secret == nil {
-		return nil, fmt.Errorf("secret is nil")
-	}
-
-	// The structure for a KVv2 secret differs from the structure of a KV1
-	// secret. Next to the secret 'data' a KVv2 secret contains also some
-	// 'metadata'. We only need the 'data' field to go on.
-	secretData := secret.Data
-	if v2 {
-		var ok bool
-		secretData, ok = secret.Data["data"].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("could not parse secret")
-		}
-	}
-
-	data, err := convertData(secretData, keys, isBinary)
-	if err != nil {
-		return nil, err
-	}
-
-	// If the data map is empty we return an error. This can happend, if the
-	// secret which was retrieved from Vault is under a KVv2 secrets engine, but
-	// the secret engine was not provided in the cr for the secret. Then the
-	// returned secret looks like this: &api.Secret{RequestID:\"be7b671f-a097-1081-15ec-b4710f2a6249\", LeaseID:\"\", LeaseDuration:0, Renewable:false, Data:map[string]interface {}(nil), Warnings:[]string{\"Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, use 'vault kv get' for this operation.\"}, Auth:(*api.SecretAuth)(nil), WrapInfo:(*api.SecretWrapInfo)(nil)}"}
-	if len(data) == 0 {
-		return nil, fmt.Errorf("invalid secret data")
-	}
-	return data, nil
+func (c *Client) RevokeLease(leaseId string) error {
+	return c.client.Sys().Revoke(leaseId)
 }
 
 // contains checks if a given key is in a slice of keys.
@@ -194,7 +129,7 @@ func contains(key string, keys []string) bool {
 	return false
 }
 
-// Convert the secret data for a Kubernetes secret. We only add the provided
+// Renders the secret data for a Kubernetes secret. We only add the provided
 // keys to the resulting data or if there are no keys provided we add all
 // keys of the secret.
 // To support nested secret values we check the type of the value first. If
@@ -323,5 +258,5 @@ func (c *Client) addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 }
 
 func (c *Client) GetPKIRenew() time.Duration {
-	return c.pkiRenew
+	return c.PKIRenew
 }

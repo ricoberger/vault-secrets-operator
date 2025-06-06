@@ -1,0 +1,46 @@
+replicaCount: 2
+
+# override this on some envs
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    memory: 128Mi
+    cpu: 50m
+
+vault:
+  address: https://vault.padoa.fr
+  authMethod: azure
+  azureScaleset: true
+  reconciliationTime: 1800
+
+image:
+  repository: padoa.azurecr.io/padoa-tools/vault-secrets-operator
+  tag: master
+  pullPolicy: Always
+
+serviceMonitor:
+  enabled: true
+
+# TODO: challenge these settings
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 99
+        preference:
+          matchExpressions:
+            - key: CriticalAddonsOnly
+              operator: Exists
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app
+              operator: In
+              values:
+                - vault-secrets-operator
+        topologyKey: "kubernetes.io/hostname"
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Exists
+    effect: NoSchedule

@@ -8,6 +8,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/hashicorp/vault/api"
+
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
 	"github.com/ricoberger/vault-secrets-operator/vault"
 
@@ -19,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -33,11 +36,6 @@ const (
 	conditionReasonUpdateFailed = "UpdateFailed"
 	conditionReasonMergeFailed  = "MergeFailed"
 	conditionInvalidResource    = "InvalidResource"
-)
-
-const (
-	kvEngine  = "kv"
-	pkiEngine = "pki"
 )
 
 // VaultSecretReconciler reconciles a VaultSecret object
@@ -86,7 +84,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Get secret from Vault.
-	// If the VaultSecret contains the vaulRole property we are creating a new client with the specified Vault Role to
+	// If the VaultSecret contains the vaultRole property we are creating a new client with the specified Vault Role to
 	// get the secret.
 	// When the property isn't set we are using the shared client. It is also possible that the shared client is nil, so
 	// that we have to check for this first. This could happen since we do not return an error when we initializing the
@@ -115,38 +113,76 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == kvEngine {
-		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
+	var expiresAt *time.Time
+	var requeueAfter time.Duration
+
+	if instance.Spec.SecretEngine == "" || instance.Spec.SecretEngine == ricobergerdev1alpha1.KVEngine {
+		secret, err := vaultClient.GetSecret(instance.Spec.Path, instance.Spec.Version, instance.Spec.VaultNamespace)
 		if err != nil {
-			// Error while getting the secret from Vault - requeue the request.
 			log.Error(err, "Could not get secret from vault")
 			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
-	} else if instance.Spec.SecretEngine == pkiEngine {
+
+		data, err = vaultClient.KVRenderData(secret, instance.Spec.Keys, instance.Spec.IsBinary)
+		if err != nil {
+			log.Error(err, "Could not render secret data")
+			r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		}
+	} else if instance.Spec.SecretEngine == ricobergerdev1alpha1.PKIEngine {
 		if err := ValidatePKI(instance); err != nil {
 			log.Error(err, "Resource validation failed")
 			r.updateConditions(ctx, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
-		var expiration *time.Time
-		data, expiration, err = vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.Role, instance.Spec.EngineOptions)
+		var secret *api.Secret
+		secret, expiresAt, err = vaultClient.GetCertificate(instance.Spec.Path, instance.Spec.Role, instance.Spec.EngineOptions)
 		if err != nil {
 			log.Error(err, "Could not get certificate from vault")
 			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
 		}
 
-		// Requeue before expiration
-		log.Info(fmt.Sprintf("Certificate will expire on %s", expiration.String()))
-		ra := expiration.Sub(time.Now()) - vaultClient.GetPKIRenew()
-		if ra <= 0 {
-			reconcileResult.Requeue = true
-		} else {
-			reconcileResult.RequeueAfter = ra
-			log.Info(fmt.Sprintf("Certificate will be renewed on %s", time.Now().Add(ra).String()))
+		data, err = vaultClient.PKIRenderData(secret)
+		if err != nil {
+			log.Error(err, "Could not render certificate data")
+			r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
 		}
+
+		requeueAfter = expiresAt.Sub(time.Now()) - vaultClient.PKIRenew
+	} else if instance.Spec.SecretEngine == ricobergerdev1alpha1.DatabaseEngine {
+		if err := ValidateDatabase(instance); err != nil {
+			log.Error(err, "Resource validation failed")
+			r.updateConditions(ctx, instance, conditionInvalidResource, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		}
+
+		var secret *api.Secret
+		secret, expiresAt, err = vaultClient.GetDatabaseCreds(instance.Spec.Path, instance.Spec.Role)
+		if err != nil {
+			log.Error(err, "Could not get database credentials from vault")
+			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		}
+
+		data, err = vaultClient.DatabaseRenderData(secret)
+		if err != nil {
+			log.Error(err, "Could not render database data")
+			r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		}
+
+		requeueAfter = expiresAt.Sub(time.Now()) - vaultClient.DatabaseRenew
+	}
+
+	if expiresAt != nil {
+		r.updateExpiration(ctx, instance, expiresAt)
+		reconcileResult.RequeueAfter = expiresAt.Sub(time.Now())
+		log.Info(fmt.Sprintf("Secret %s will expire on %s", instance.Name, expiresAt.String()))
+		log.Info(fmt.Sprintf("Secret %s will be renewed on %s", instance.Name, time.Now().Add(requeueAfter).String()))
 	}
 
 	// Define a new Secret object
@@ -210,11 +246,23 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
 	}
 
-	// Secret updated successfully - requeue only if no version is specified
 	return reconcileResult, nil
 }
 
+func (r *VaultSecretReconciler) updateExpiration(ctx context.Context, instance *ricobergerdev1alpha1.VaultSecret, expiresAt *time.Time) {
+	return
+	//instance.Status.Expires = true
+	//instance.Status.ExpiresAt = expiresAt.String()
+
+	//err := r.Status().Update(ctx, instance)
+	//if err != nil {
+	//	log.Error(err, "Could not update expiration in status")
+	//}
+}
+
 func (r *VaultSecretReconciler) updateConditions(ctx context.Context, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {
+	//instance.Status.Expires = true
+	//instance.Status.ExpiresAt = time.Now().Add(time.Second * 30).String()
 	instance.Status.Conditions = []metav1.Condition{{
 		Type:               conditionTypeSecretCreated,
 		Status:             status,
@@ -242,6 +290,9 @@ func ignorePredicate() predicate.Predicate {
 // SetupWithManager sets up the controller with the Manager.
 func (r *VaultSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 6, // We launch a dice, it want to 6
+		}).
 		For(&ricobergerdev1alpha1.VaultSecret{}).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(ignorePredicate()).
