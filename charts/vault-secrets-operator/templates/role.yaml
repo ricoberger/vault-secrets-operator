@@ -51,6 +51,16 @@ rules:
   - update
   - watch
 - apiGroups:
+  - apps
+  resources:
+  - deployments
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
   - ricoberger.de
   resources:
   - vaultsecrets

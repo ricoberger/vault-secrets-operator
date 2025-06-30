@@ -9,11 +9,13 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
 	"github.com/ricoberger/vault-secrets-operator/controllers/metrics"
 	"github.com/ricoberger/vault-secrets-operator/vault"
 
 	"github.com/Masterminds/sprig/v3"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,6 +57,8 @@ type VaultSecretReconciler struct {
 // +kubebuilder:rbac:groups=ricoberger.de,resources=vaultsecrets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=ricoberger.de,resources=vaultsecrets/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;update
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
@@ -204,6 +208,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Check if this Secret already exists
 	found := &corev1.Secret{}
 	err = r.Get(ctx, types.NamespacedName{Name: secret.Name, Namespace: secret.Namespace}, found)
+
+	var secretUpdated bool
 	if err != nil && errors.IsNotFound(err) {
 		log.Info("Creating a new Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
 		err = r.Create(ctx, secret)
@@ -213,35 +219,28 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		// Secret created successfully - requeue only if no version is specified
+		// Secret created successfully
 		r.updateConditions(ctx, instance, conditionReasonCreated, "Secret was created", metav1.ConditionTrue)
-		return reconcileResult, nil
+		secretUpdated = true
 	} else if err != nil {
 		log.Error(err, "Could not create secret")
 		r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
 		return ctrl.Result{}, err
-	}
-
-	// Secret already exists, update the secret
-	// Merge -> Checks the existing data keys and merge them into the updated secret
-	// Replace -> Do not check the data keys and replace the secret
-	if instance.Spec.ReconcileStrategy == "Merge" {
-		secret = mergeSecretData(secret, found)
-
-		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) && reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) && len(instance.Status.Conditions) == 1 && instance.Status.Conditions[0].Status == metav1.ConditionTrue {
-			log.Info("Skip updating a Secret cause data no change", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-		} else {
-			log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-			err = r.Update(ctx, secret)
-			if err != nil {
-				log.Error(err, "Could not update secret")
-				r.updateConditions(ctx, instance, conditionReasonMergeFailed, err.Error(), metav1.ConditionFalse)
-				return ctrl.Result{}, err
-			}
-			r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
-		}
 	} else {
-		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) && reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) && len(instance.Status.Conditions) == 1 && instance.Status.Conditions[0].Status == metav1.ConditionTrue {
+		// Secret already exists, check if it needs updating
+		needsUpdate := false
+		if instance.Spec.ReconcileStrategy == "Merge" {
+			secret = mergeSecretData(secret, found)
+			needsUpdate = !(secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) &&
+				reflect.DeepEqual(secret.Labels, found.Labels) &&
+				reflect.DeepEqual(secret.Annotations, found.Annotations))
+		} else {
+			needsUpdate = !(secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) &&
+				reflect.DeepEqual(secret.Labels, found.Labels) &&
+				reflect.DeepEqual(secret.Annotations, found.Annotations))
+		}
+
+		if !needsUpdate {
 			log.Info("Skip updating a Secret cause no change", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
 		} else {
 			log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
@@ -252,10 +251,19 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				return ctrl.Result{}, err
 			}
 			r.updateConditions(ctx, instance, conditionReasonUpdated, "Secret was updated", metav1.ConditionTrue)
+			secretUpdated = true
 		}
 	}
 
-	// Finally we add the vaultsecretsFinalizer to the VaultSecret. The finilizer is needed so that we can remove the
+	// Only trigger restart if the secret was actually created or updated
+	if secretUpdated && instance.Spec.RestartOnChange != nil {
+		if err := r.restartResource(ctx, instance.Spec.RestartOnChange, req.Namespace, instance); err != nil {
+			log.Error(err, "failed to restart resource")
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Finally we add the vaultsecretsFinalizer to the VaultSecret. The finalizer is needed so that we can remove the
 	// metrics for a delete secret.
 	if !controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
 		controllerutil.AddFinalizer(instance, vaultsecretsFinalizer)
@@ -426,4 +434,67 @@ func mergeSecretData(new, found *corev1.Secret) *corev1.Secret {
 	}
 
 	return new
+}
+
+func (r *VaultSecretReconciler) restartResource(ctx context.Context, restartSpec *v1alpha1.RestartOnChangeSpec, namespace string, instance *ricobergerdev1alpha1.VaultSecret) error {
+	if restartSpec == nil {
+		return nil
+	}
+
+	log := logr.FromContext(ctx)
+
+	// Check if there are any conditions and if the most recent one indicates a secret update
+	if len(instance.Status.Conditions) == 0 {
+		log.V(1).Info("No conditions found, skipping restart")
+		return nil
+	}
+
+	lastCondition := instance.Status.Conditions[len(instance.Status.Conditions)-1]
+	if lastCondition.Type != conditionTypeSecretCreated ||
+		(lastCondition.Reason != conditionReasonUpdated && lastCondition.Reason != conditionReasonCreated) {
+		log.V(1).Info("Last condition does not indicate secret update, skipping restart",
+			"conditionType", lastCondition.Type,
+			"reason", lastCondition.Reason)
+		return nil
+	}
+
+	// Handle different resource types
+	switch restartSpec.Kind {
+	case "Deployment":
+		deployment := &appsv1.Deployment{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: restartSpec.Name, Namespace: namespace}, deployment); err != nil {
+			return fmt.Errorf("failed to get deployment: %w", err)
+		}
+
+		log.Info("Triggering rolling update for Deployment",
+			"deployment", deployment.Name,
+			"namespace", deployment.Namespace)
+
+		// Trigger rolling update by updating pod template annotations
+		if deployment.Spec.Template.Annotations == nil {
+			deployment.Spec.Template.Annotations = map[string]string{}
+		}
+		deployment.Spec.Template.Annotations["vaultsecrets.ricoberger.de/restartedAt"] = time.Now().Format(time.RFC3339)
+		return r.Client.Update(ctx, deployment)
+
+	case "StatefulSet":
+		statefulset := &appsv1.StatefulSet{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: restartSpec.Name, Namespace: namespace}, statefulset); err != nil {
+			return fmt.Errorf("failed to get statefulset: %w", err)
+		}
+
+		log.Info("Triggering rolling update for StatefulSet",
+			"statefulset", statefulset.Name,
+			"namespace", statefulset.Namespace)
+
+		// Trigger rolling update by updating pod template annotations
+		if statefulset.Spec.Template.Annotations == nil {
+			statefulset.Spec.Template.Annotations = map[string]string{}
+		}
+		statefulset.Spec.Template.Annotations["vaultsecrets.ricoberger.de/restartedAt"] = time.Now().Format(time.RFC3339)
+		return r.Client.Update(ctx, statefulset)
+
+	default:
+		return fmt.Errorf("unsupported resource kind: %s", restartSpec.Kind)
+	}
 }
