@@ -291,7 +291,7 @@ func ignorePredicate() predicate.Predicate {
 func (r *VaultSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{
-			MaxConcurrentReconciles: 6, // We launch a dice, it want to 6
+			MaxConcurrentReconciles: 1, // We launch a dice, it want to 6
 		}).
 		For(&ricobergerdev1alpha1.VaultSecret{}).
 		Owns(&corev1.Secret{}).
