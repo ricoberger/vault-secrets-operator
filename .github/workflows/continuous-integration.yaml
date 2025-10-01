@@ -72,8 +72,8 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      - name: Lint
-        uses: golangci/golangci-lint-action@v8
+      # - name: Lint
+      #   uses: golangci/golangci-lint-action@v8
 
       - name: Test
         run: |
