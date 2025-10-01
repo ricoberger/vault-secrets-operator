@@ -15,12 +15,11 @@ import (
 	gcpmetadata "cloud.google.com/go/compute/metadata"
 	gcpcredentials "cloud.google.com/go/iam/credentials/apiv1"
 	gcpcredentialspb "cloud.google.com/go/iam/credentials/apiv1/credentialspb"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/ec2imds"
+	ec2imds "github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/smithy-go/middleware"
-	"github.com/aws/smithy-go/private/protocol"
+	smithyprivateprotocol "github.com/aws/smithy-go/private/protocol"
 	"github.com/hashicorp/vault/api"
 	"github.com/leosayous21/go-azure-msi/msi"
 	"github.com/pkg/errors"
@@ -531,26 +530,20 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			awsLoginDataFunc = func() (map[string]any, error) {
 				ctx := context.Background()
 
-				stsSigningResolver := func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-					return aws.Endpoint{
-						URL:           fmt.Sprintf("https://sts.%s.amazonaws.com", region),
-						SigningRegion: region,
-						SigningName:   "sts",
-					}, nil
-				}
-
 				// In v2, LoadDefaultConfig automatically creates a credential provider chain
 				// that includes environment variables, web identity tokens, shared config/credentials,
 				// and IAM roles for EC2/ECS. This replaces the manual provider construction from v1.
 				cfg, err := awsconfig.LoadDefaultConfig(ctx,
 					awsconfig.WithRegion(vaultAwsRegion),
-					awsconfig.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(stsSigningResolver)),
 				)
 				if err != nil {
 					return nil, err
 				}
 
-				svc := sts.NewFromConfig(cfg)
+				svc := sts.NewFromConfig(cfg, func(o *sts.Options) {
+					o.EndpointResolverV2 = customEndpointResolver{AWSRegion: vaultAwsRegion}
+				})
+
 				var capturedRequest *http.Request
 				var params *sts.GetCallerIdentityInput
 
@@ -562,7 +555,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 						}, middleware.After)
 					})
 					o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
-						return protocol.AddCaptureRequestMiddleware(stack, capturedRequest)
+						return smithyprivateprotocol.AddCaptureRequestMiddleware(stack, capturedRequest)
 					})
 				})
 				if err != nil {
@@ -580,7 +573,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 					return nil, err
 				}
 
-				return map[string]interface{}{
+				return map[string]any{
 					"iam_http_request_method": capturedRequest.Method,
 					"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(capturedRequest.URL.String())),
 					"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJson),

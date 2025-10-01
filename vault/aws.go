@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
@@ -22,4 +24,14 @@ func (m *customHeaderMiddleware) HandleBuild(ctx context.Context, in middleware.
 	}
 	req.Header.Set(m.HeaderName, m.HeaderValue)
 	return next.HandleBuild(ctx, in)
+}
+
+type customEndpointResolver struct {
+	AWSRegion string
+}
+
+func (c customEndpointResolver) ResolveEndpoint(ctx context.Context, params sts.EndpointParameters) (smithyendpoints.Endpoint, error) {
+	params.Region = &c.AWSRegion
+	defaultResolver := sts.NewDefaultEndpointResolverV2()
+	return defaultResolver.ResolveEndpoint(ctx, params)
 }
