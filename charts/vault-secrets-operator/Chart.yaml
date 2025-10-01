@@ -4,5 +4,5 @@ name: vault-secrets-operator
 description:
   Create Kubernetes secrets from Vault for a secure GitOps based workflow.
 type: application
-version: 3.1.2
-appVersion: v1.26.2
+version: 3.1.3
+appVersion: v1.27.0
