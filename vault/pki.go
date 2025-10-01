@@ -7,7 +7,7 @@ import (
 )
 
 func (c *Client) GetCertificate(path string, role string, options map[string]string) (map[string][]byte, *time.Time, error) {
-	optionsI := make(map[string]interface{}, len(options))
+	optionsI := make(map[string]any, len(options))
 	for k, v := range options {
 		optionsI[k] = v
 	}

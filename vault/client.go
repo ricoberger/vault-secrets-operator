@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -168,7 +169,7 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 	secretData := secret.Data
 	if v2 {
 		var ok bool
-		secretData, ok = secret.Data["data"].(map[string]interface{})
+		secretData, ok = secret.Data["data"].(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("could not parse secret")
 		}
@@ -189,33 +190,22 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 	return data, nil
 }
 
-// contains checks if a given key is in a slice of keys.
-func contains(key string, keys []string) bool {
-	for _, k := range keys {
-		if k == key {
-			return true
-		}
-	}
-
-	return false
-}
-
 // Convert the secret data for a Kubernetes secret. We only add the provided
 // keys to the resulting data or if there are no keys provided we add all
 // keys of the secret.
 // To support nested secret values we check the type of the value first. If
 // The type is 'map[string]interface{}' we marshal the value to a JSON
 // string, which can be used for the Kubernetes secret.
-func convertData(secretData map[string]interface{}, keys []string, isBinary bool) (map[string][]byte, error) {
+func convertData(secretData map[string]any, keys []string, isBinary bool) (map[string][]byte, error) {
 	var err error
 	data := make(map[string][]byte)
 	for key, value := range secretData {
 		if value == nil {
 			continue
 		}
-		if len(keys) == 0 || contains(key, keys) {
+		if len(keys) == 0 || slices.Contains(keys, key) {
 			switch value := value.(type) {
-			case map[string]interface{}:
+			case map[string]any:
 				jsonString, err := json.Marshal(value)
 				if err != nil {
 					return nil, err
@@ -233,7 +223,8 @@ func convertData(secretData map[string]interface{}, keys []string, isBinary bool
 			case json.Number:
 				data[key] = []byte(value)
 			case bool:
-				data[key] = []byte(fmt.Sprintf("%t", value))
+				v := fmt.Sprintf("%t", value)
+				data[key] = []byte(v)
 			default:
 				return nil, fmt.Errorf("could not parse secret value")
 			}
@@ -286,7 +277,7 @@ func (c *Client) kvPreflightVersionRequest(path string) (string, int, error) {
 	if options == nil {
 		return mountPath, 1, nil
 	}
-	versionRaw := options.(map[string]interface{})["version"]
+	versionRaw := options.(map[string]any)["version"]
 	if versionRaw == nil {
 		return mountPath, 1, nil
 	}
