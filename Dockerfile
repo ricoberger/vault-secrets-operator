@@ -1,4 +1,4 @@
-FROM golang:1.25.3 AS builder
+FROM golang:1.25.4 AS builder
 WORKDIR /workspace
 COPY go.mod go.sum /workspace/
 RUN go mod download
