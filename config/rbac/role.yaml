@@ -25,6 +25,16 @@ rules:
   - create
   - patch
 - apiGroups:
+  - apps
+  resources:
+  - deployments
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - coordination.k8s.io
   resources:
   - leases
