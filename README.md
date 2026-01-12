@@ -825,6 +825,31 @@ metadata:
 type: Opaque
 ```
 
+### RestartOnChange
+
+You can specify a resource to restart when a `VaultSecret` changes by adding the `restartOnChange` field to your CRD. This is useful when you want to ensure that applications pick up new secret values by triggering a rolling update.
+
+The operator supports restarting the following resource types:
+- Deployment
+- StatefulSet
+
+The resource must be in the same namespace as the VaultSecret. The operator will trigger a rolling update by updating the pod template annotations, respecting the workload's update strategy:
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: example-vaultsecret
+spec:
+  path: path/to/example-vaultsecret
+  type: Opaque
+  restartOnChange:
+    kind: Deployment  # or StatefulSet
+    name: my-deployment
+```
+
+When the secret changes, the operator will add/update the `vaultsecrets.ricoberger.de/restartedAt` annotation on the pod template, which triggers a rolling update according to the workload's configured update strategy.
+
 ## Development
 
 After modifying the `*_types.go` file always run the following command to update

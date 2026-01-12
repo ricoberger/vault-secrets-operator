@@ -18,4 +18,5 @@ rules:
     - subjectaccessreviews
     verbs:
     - create
+
 {{ end }}
