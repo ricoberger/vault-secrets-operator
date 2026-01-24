@@ -238,6 +238,14 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenRenewalRetryInterval = 30.0
 		}
 
+		tokenMaxTTL, err := strconv.Atoi(vaultTokenMaxTTL)
+		if err != nil {
+			// Vault default max TTL is 32 days, use 16 days as the reasonable default if
+			// VAULT_TOKEN_MAX_TTL not set.
+			// https://learn.hashicorp.com/tutorials/vault/tokens
+			tokenMaxTTL = 16 * 24 * 60 * 60
+		}
+
 		apiClient.SetToken(secret.Auth.ClientToken)
 
 		return &Client{
@@ -246,9 +254,42 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			tokenLeaseDuration:        tokenLeaseDuration,
 			tokenRenewalInterval:      tokenRenewalInterval,
 			tokenRenewalRetryInterval: tokenRenewalRetryInterval,
+			tokenMaxTTL:               tokenMaxTTL,
 			rootVaultNamespace:        vaultNamespace,
 			restrictNamespace:         vaultRestrictNamespace,
-			pkiRenew:                  pkiRenew,
+			requestToken: func(c *Client) error {
+				// Read the service account token value and create a map for the
+				// authentication against Vault again as the token might have changed.
+				kubeToken, err := os.ReadFile(serviceAccountTokenPath)
+				if err != nil {
+					return err
+				}
+
+				data := make(map[string]any)
+				data["jwt"] = string(kubeToken)
+				data["role"] = vaultKubernetesRole
+
+				// Reauthenticate with Vault and update the token for further
+				// interactons with Vault.
+				secret, err := apiClient.Logical().Write(vaultKubernetesPath+"/login", data)
+				if err != nil {
+					return err
+				} else if secret.Auth == nil {
+					return fmt.Errorf("missing authentication information")
+				}
+
+				c.client.SetToken(secret.Auth.ClientToken)
+
+				// Update token lease duration and renewal interval
+				c.tokenLeaseDuration = secret.Auth.LeaseDuration
+				c.tokenRenewalInterval, err = strconv.ParseFloat(vaultTokenRenewalInterval, 64)
+				if err != nil {
+					c.tokenRenewalInterval = float64(c.tokenLeaseDuration) * 0.5
+				}
+
+				return nil
+			},
+			pkiRenew: pkiRenew,
 		}, nil
 	}
 
