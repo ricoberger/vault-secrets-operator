@@ -10,8 +10,8 @@ on:
       - main
 
 jobs:
-  kubernetes:
-    name: Kubernetes
+  e2e:
+    name: E2E Tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -38,10 +38,10 @@ jobs:
           sudo apt-get update && sudo apt-get install vault
 
       - name: Setup kind Cluster
-        run: ./hack/setup-kind.sh
+        run: ./test/e2e/setup-kind.sh
 
-      - name: Run Test
-        run: ./hack/setup-kind-${{ matrix.deployment }}.sh
+      - name: Run E2E Test
+        run: ./test/e2e/${{ matrix.deployment }}.sh
         env:
           VAULT_ADDR: http://127.0.0.1:8200
 
