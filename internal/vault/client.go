@@ -14,34 +14,42 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-// RequestToken is a function to request a new Vault token, specific for auth method.
+// RequestToken is a function to request a new Vault token, specific for auth
+// method.
 type RequestToken func(*Client) error
 
 // Client is the structure of our global client for Vault.
 type Client struct {
 	// client is the API client for requests against Vault.
 	client *api.Client
-	// tokenLeaseDuration is the lease duration of the token for the interaction with vault.
+	// tokenLeaseDuration is the lease duration of the token for the interaction
+	// with Vault.
 	tokenLeaseDuration int
-	// renewToken is whether the operator should renew its own token
-	// to be used when a service external to the operator renews the token itself
-	// defaults to true
+	// renewToken is whether the operator should renew its own token to be used
+	// when a service external to the operator renews the token itself defaults
+	// to true
 	renewToken bool
-	// tokenRenewalInterval is the time between two successive vault token renewals.
+	// tokenRenewalInterval is the time between two successive vault token
+	// renewals.
 	tokenRenewalInterval float64
-	// tokenRenewalRetryInterval is the time until a failed vault token renewal is retried.
+	// tokenRenewalRetryInterval is the time until a failed vault token renewal
+	// is retried.
 	tokenRenewalRetryInterval float64
-	// tokenMaxTTL is the maximum lifetime for the token in seconds, after that time a new token
-	// must be requested. Zero means the tokens lives and can be renewed forever.
+	// tokenMaxTTL is the maximum lifetime for the token in seconds, after that
+	// time a new token must be requested. Zero means the tokens lives and can
+	// be renewed forever.
 	tokenMaxTTL int
-	// requestToken is a function to request a new Vault token, specific for auth method.
+	// requestToken is a function to request a new Vault token, specific for
+	// auth method.
 	requestToken RequestToken
 	// vault namespace
 	rootVaultNamespace string
-	// restrict the operator to the Vault namespace set in the rootVaultNamespace field
+	// restrict the operator to the Vault namespace set in the
+	// rootVaultNamespace field
 	restrictNamespace bool
-	// failedRenewTokenAttempts is the number of failed renew token attempts, if the renew token function fails 5 times
-	// the liveness probe will fail, to force a restart of the operator.
+	// failedRenewTokenAttempts is the number of failed renew token attempts, if
+	// the renew token function fails 5 times the liveness probe will fail, to
+	// force a restart of the operator.
 	failedRenewTokenAttempts int
 	// pkiRenew minimum remaining period of validity before certificate renewal
 	pkiRenew time.Duration
@@ -64,8 +72,8 @@ func (c *Client) RenewToken() {
 			c.client.SetNamespace(c.rootVaultNamespace)
 		}
 
-		// Request a new token if the actual token lifetime more than the specified maximum
-		// lifetime.
+		// Request a new token if the actual token lifetime more than the
+		// specified maximum lifetime.
 		elapsed := time.Since(started).Seconds()
 		if c.tokenMaxTTL > 0 && elapsed >= float64(c.tokenMaxTTL) && c.requestToken != nil {
 			log.Info("Request new Vault token")
@@ -95,7 +103,8 @@ func (c *Client) RenewToken() {
 	}
 }
 
-// GetHealth checks if the failedRenewTokenAttempts hits the given thresholds. If this is the case an error is returned.
+// GetHealth checks if the failedRenewTokenAttempts hits the given thresholds.
+// If this is the case an error is returned.
 func (c *Client) GetHealth(threshold int) error {
 	if c.failedRenewTokenAttempts >= threshold {
 		return fmt.Errorf("renew Vault token failed %d times", c.failedRenewTokenAttempts)
@@ -109,7 +118,7 @@ func (c *Client) IsNamespaceRestricted() (bool, string) {
 }
 
 // GetSecret returns the value for a given secret.
-func (c *Client) GetSecret(secretEngine string, path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
+func (c *Client) GetSecret(path string, keys []string, version int, isBinary bool, vaultNamespace string) (map[string][]byte, error) {
 	// Get the secret for the given path and return the secret data.
 	log.Info(fmt.Sprintf("Read secret %s", path))
 
@@ -180,7 +189,7 @@ func (c *Client) GetSecret(secretEngine string, path string, keys []string, vers
 		return nil, err
 	}
 
-	// If the data map is empty we return an error. This can happend, if the
+	// If the data map is empty we return an error. This can happened, if the
 	// secret which was retrieved from Vault is under a KVv2 secrets engine, but
 	// the secret engine was not provided in the cr for the secret. Then the
 	// returned secret looks like this: &api.Secret{RequestID:\"be7b671f-a097-1081-15ec-b4710f2a6249\", LeaseID:\"\", LeaseDuration:0, Renewable:false, Data:map[string]interface {}(nil), Warnings:[]string{\"Invalid path for a versioned K/V secrets engine. See the API docs for the appropriate API endpoints to use. If using the Vault CLI, use 'vault kv get' for this operation.\"}, Auth:(*api.SecretAuth)(nil), WrapInfo:(*api.SecretWrapInfo)(nil)}"}
@@ -210,7 +219,7 @@ func convertData(secretData map[string]any, keys []string, isBinary bool) (map[s
 				if err != nil {
 					return nil, err
 				}
-				data[key] = []byte(jsonString)
+				data[key] = jsonString
 			case string:
 				if isBinary {
 					data[key], err = b64.StdEncoding.DecodeString(value)

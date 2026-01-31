@@ -32,25 +32,30 @@ var (
 	// log is our customized logger.
 	log = logf.Log.WithName("vault")
 
-	// SharedClient is our Vault client wich is used for the token auth method and the kubernetes auth method with a
-	// a globally configured Vault role via the VAULT_KUBERNETES_ROLE environment variable.
-	// The client is then used for all requests against Vault, except for secrets, which have the vaultRole property
-	// specified.
-	// If the operator is configured with the kubernetes auth method, but without a VAULT_KUBERNETES_ROLE the client can
-	// be nil. When the client is nil every secret must contain the vaultRole property.
+	// SharedClient is our Vault client which is used for the token auth method
+	// and the kubernetes auth method with a a globally configured Vault role
+	// via the VAULT_KUBERNETES_ROLE environment variable. The client is then
+	// used for all requests against Vault, except for secrets, which have the
+	// vaultRole property specified. If the operator is configured with the
+	// Kubernetes auth method, but without a VAULT_KUBERNETES_ROLE the client
+	// can be nil. When the client is nil every secret must contain the
+	// vaultRole property.
 	SharedClient *Client
 
-	// ReconciliationTime specify the time in seconds after a vault secret is reconciled.
+	// ReconciliationTime specify the time in seconds after a vault secret is
+	// reconciled.
 	ReconciliationTime int
 )
 
-// InitSharedClient is used to initialize the shared client, when the VAULT_KUBERNETES_ROLE is specified.
+// InitSharedClient is used to initialize the shared client, when the
+// VAULT_KUBERNETES_ROLE is specified.
 func InitSharedClient() error {
 	var err error
 
-	// Parse the environment variable for the reconciliation time. If the time is not specify we set it to 0.
-	// If the reconciliation time is 0 we skip the reconciliation of a vault secret.
-	// The reconciliation time can be specified via the VAULT_RECONCILIATION_TIME environment variable.
+	// Parse the environment variable for the reconciliation time. If the time
+	// is not specify we set it to 0. If the reconciliation time is 0 we skip
+	// the reconciliation of a vault secret. The reconciliation time can be
+	// specified via the VAULT_RECONCILIATION_TIME environment variable.
 	if ReconciliationTime, err = strconv.Atoi(os.Getenv("VAULT_RECONCILIATION_TIME")); err != nil {
 		log.WithValues("ReconciliationTime", 0).Info("Reconciliation will be skipped because it is 0.")
 		ReconciliationTime = 0
@@ -67,7 +72,9 @@ func InitSharedClient() error {
 	return nil
 }
 
-// CreateClient is used by the InitSharedClient and directly for a reconciliation loop to create a new Vault client.
+// CreateClient is used by the InitSharedClient and directly for a
+// reconciliation loop to create a new Vault client.
+// nolint:gocyclo
 func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	vaultAddress := os.Getenv("VAULT_ADDRESS")
 	vaultHeader := os.Getenv("VAULT_HEADER")
@@ -190,9 +197,11 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			return nil, fmt.Errorf("missing Kubernetes auth path")
 		}
 
-		// For the shared client the Vault role must be specified via the VAULT_KUBERNETES_ROLE environment variable.
-		// If this environment variable is missing we return nil instead of an error, because the operator will work as
-		// usual, when each secret specifies the vaultRole property.
+		// For the shared client the Vault role must be specified via the
+		// VAULT_KUBERNETES_ROLE environment variable. If this environment
+		// variable is missing we return nil instead of an error, because the
+		// operator will work as usual, when each secret specifies the vaultRole
+		// property.
 		if vaultKubernetesRole == "" {
 			return nil, nil
 		}
@@ -240,8 +249,8 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		tokenMaxTTL, err := strconv.Atoi(vaultTokenMaxTTL)
 		if err != nil {
-			// Vault default max TTL is 32 days, use 16 days as the reasonable default if
-			// VAULT_TOKEN_MAX_TTL not set.
+			// Vault default max TTL is 32 days, use 16 days as the reasonable
+			// default if VAULT_TOKEN_MAX_TTL not set.
 			// https://learn.hashicorp.com/tutorials/vault/tokens
 			tokenMaxTTL = 16 * 24 * 60 * 60
 		}
@@ -270,7 +279,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				data["role"] = vaultKubernetesRole
 
 				// Reauthenticate with Vault and update the token for further
-				// interactons with Vault.
+				// interactions with Vault.
 				secret, err := apiClient.Logical().Write(vaultKubernetesPath+"/login", data)
 				if err != nil {
 					return err
@@ -338,8 +347,8 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		tokenMaxTTL, err := strconv.Atoi(vaultTokenMaxTTL)
 		if err != nil {
-			// Vault default max TTL is 32 days, use 16 days as the reasonable default if
-			// VAULT_TOKEN_MAX_TTL not set.
+			// Vault default max TTL is 32 days, use 16 days as the reasonable
+			// default if VAULT_TOKEN_MAX_TTL not set.
 			// https://learn.hashicorp.com/tutorials/vault/tokens
 			tokenMaxTTL = 16 * 24 * 60 * 60
 		}
@@ -407,8 +416,8 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		tokenMaxTTL, err := strconv.Atoi(vaultTokenMaxTTL)
 		if err != nil {
-			// Vault default max TTL is 32 days, use 16 days as the reasonable default if
-			// VAULT_TOKEN_MAX_TTL not set.
+			// Vault default max TTL is 32 days, use 16 days as the reasonable
+			// default if VAULT_TOKEN_MAX_TTL not set.
 			// https://learn.hashicorp.com/tutorials/vault/tokens
 			tokenMaxTTL = 16 * 24 * 60 * 60
 		}
@@ -454,9 +463,11 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			vaultAzurePath = "auth/azure"
 		}
 
-		// For the shared client the Vault role must be specified via the VAULT_KUBERNETES_ROLE environment variable.
-		// If this environment variable is missing we return nil instead of an error, because the operator will work as
-		// usual, when each secret specifies the vaultRole property.
+		// For the shared client the Vault role must be specified via the
+		// VAULT_KUBERNETES_ROLE environment variable. If this environment
+		// variable is missing we return nil instead of an error, because the
+		// operator will work as usual, when each secret specifies the vaultRole
+		// property.
 		if vaultAzureRole == "" {
 			vaultAzureRole = "default"
 		}
@@ -473,7 +484,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 		}
 
 		data := make(map[string]any)
-		data["jwt"] = string(msiToken.AccessToken)
+		data["jwt"] = msiToken.AccessToken
 		data["role"] = vaultAzureRole
 		data["subscription_id"] = metadata.SubscriptionId
 		data["resource_group_name"] = metadata.ResourceGroupName
@@ -571,9 +582,11 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			awsLoginDataFunc = func() (map[string]any, error) {
 				ctx := context.Background()
 
-				// In v2, LoadDefaultConfig automatically creates a credential provider chain
-				// that includes environment variables, web identity tokens, shared config/credentials,
-				// and IAM roles for EC2/ECS. This replaces the manual provider construction from v1.
+				// In v2, LoadDefaultConfig automatically creates a credential
+				// provider chain that includes environment variables, web
+				// identity tokens, shared config/credentials, and IAM roles for
+				// EC2/ECS. This replaces the manual provider construction from
+				// v1.
 				cfg, err := awsconfig.LoadDefaultConfig(ctx,
 					awsconfig.WithRegion(vaultAwsRegion),
 				)
@@ -604,7 +617,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				}
 
 				// Now extract out the relevant parts of the captured request.
-				headersJson, err := json.Marshal(capturedRequest.Header)
+				headersJSON, err := json.Marshal(capturedRequest.Header)
 				if err != nil {
 					return nil, err
 				}
@@ -617,7 +630,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				return map[string]any{
 					"iam_http_request_method": capturedRequest.Method,
 					"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(capturedRequest.URL.String())),
-					"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJson),
+					"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJSON),
 					"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
 					"role":                    vaultAwsRole,
 				}, nil
@@ -660,8 +673,8 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 		// Tokens have to be reissued after a short period
 		tokenMaxTTL, err := strconv.Atoi(vaultTokenMaxTTL)
 		if err != nil {
-			// Vault default max TTL is 32 days, use 16 days as the reasonable default if
-			// VAULT_TOKEN_MAX_TTL not set.
+			// Vault default max TTL is 32 days, use 16 days as the reasonable
+			// default if VAULT_TOKEN_MAX_TTL not set.
 			// https://learn.hashicorp.com/tutorials/vault/tokens
 			tokenMaxTTL = 16 * 24 * 60 * 60
 		}
@@ -700,8 +713,8 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 	}
 
 	if vaultAuthMethod == "gcp" {
-		// Check the required mount path and role for the GCP Auth
-		// Method. If one of the env variable is missing we return an error.
+		// Check the required mount path and role for the GCP Auth Method. If
+		// one of the env variable is missing we return an error.
 		if vaultGcpPath == "" {
 			vaultGcpPath = "auth/gcp"
 		}

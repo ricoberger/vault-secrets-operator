@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
-	"github.com/ricoberger/vault-secrets-operator/controllers"
-	"github.com/ricoberger/vault-secrets-operator/vault"
+	"github.com/ricoberger/vault-secrets-operator/internal/controller"
+	"github.com/ricoberger/vault-secrets-operator/internal/vault"
 
 	// +kubebuilder:scaffold:imports
 
@@ -59,14 +59,14 @@ func main() {
 	if err != nil {
 		ctrl.Log.Error(err, "Could not create API client for Vault")
 		os.Exit(1)
-	} else {
-		if vault.SharedClient != nil {
-			if vault.SharedClient.PerformRenewToken() {
-				go vault.SharedClient.RenewToken()
-			}
-		} else {
-			ctrl.Log.Info("Shared client wasn't initialized, each secret must be use the vaultRole property")
+	}
+
+	if vault.SharedClient != nil {
+		if vault.SharedClient.PerformRenewToken() {
+			go vault.SharedClient.RenewToken()
 		}
+	} else {
+		ctrl.Log.Info("Shared client wasn't initialized, each secret must be use the vaultRole property")
 	}
 
 	watchNamespace, err := getWatchNamespace()
@@ -97,9 +97,9 @@ func main() {
 
 		// split namespaces and setup cache
 		namespaces := make(map[string]cache.Config)
-		watchNamespaces := strings.Split(watchNamespace, ",")
+		watchNamespaces := strings.SplitSeq(watchNamespace, ",")
 
-		for _, ns := range watchNamespaces {
+		for ns := range watchNamespaces {
 			namespaces[ns] = cache.Config{}
 		}
 
@@ -115,7 +115,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.VaultSecretReconciler{
+	if err = (&controller.VaultSecretReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
