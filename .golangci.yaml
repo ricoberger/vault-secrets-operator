@@ -5,14 +5,21 @@ run:
 linters:
   default: none
   enable:
-    - bodyclose
-    - gosec
+    - dupl
+    - errcheck
+    - ginkgolinter
+    - goconst
+    - gocyclo
     - govet
     - ineffassign
+    - misspell
+    - nakedret
     - noctx
+    - revive
     - staticcheck
+    - unconvert
+    - unparam
     - unused
-    - whitespace
   exclusions:
     generated: lax
     presets:

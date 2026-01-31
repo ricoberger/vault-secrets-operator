@@ -1,4 +1,4 @@
-package controllers
+package controller
 
 import (
 	"bytes"
@@ -10,8 +10,9 @@ import (
 	"time"
 
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
-	"github.com/ricoberger/vault-secrets-operator/controllers/metrics"
-	"github.com/ricoberger/vault-secrets-operator/vault"
+	"github.com/ricoberger/vault-secrets-operator/internal/metrics"
+	"github.com/ricoberger/vault-secrets-operator/internal/validators"
+	"github.com/ricoberger/vault-secrets-operator/internal/vault"
 
 	"github.com/Masterminds/sprig/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -64,6 +65,7 @@ type VaultSecretReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
+// nolint:gocyclo
 func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logr.FromContext(ctx)
 
@@ -137,9 +139,9 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			log.Error(err, "Could not get secret from Vault")
 			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
-		} else {
-			vaultClient = vault.SharedClient
 		}
+
+		vaultClient = vault.SharedClient
 	}
 
 	// If the `VAULT_RESTRICT_NAMESPACE` environment variable is set to `true` the operator should only reconcile
@@ -152,7 +154,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	switch instance.Spec.SecretEngine {
 	case "", kvEngine:
-		data, err = vaultClient.GetSecret(instance.Spec.SecretEngine, instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
+		data, err = vaultClient.GetSecret(instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
 		if err != nil {
 			// Error while getting the secret from Vault - requeue the request.
 			log.Error(err, "Could not get secret from vault")
@@ -161,7 +163,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 	case pkiEngine:
-		if err := ValidatePKI(instance); err != nil {
+		if err := validators.ValidatePKI(instance); err != nil {
 			log.Error(err, "Resource validation failed")
 			r.updateConditions(ctx, instance, conditionReasonInvalidResource, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
@@ -418,12 +420,12 @@ func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte
 	}, nil
 }
 
-func mergeSecretData(new, found *corev1.Secret) *corev1.Secret {
-	for key, value := range found.Data {
-		if _, ok := new.Data[key]; !ok {
-			new.Data[key] = value
+func mergeSecretData(newSecret, foundSecret *corev1.Secret) *corev1.Secret {
+	for key, value := range foundSecret.Data {
+		if _, ok := newSecret.Data[key]; !ok {
+			newSecret.Data[key] = value
 		}
 	}
 
-	return new
+	return newSecret
 }

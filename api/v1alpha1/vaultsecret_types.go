@@ -7,26 +7,32 @@ import (
 
 // VaultSecretSpec defines the desired state of VaultSecret
 type VaultSecretSpec struct {
-	// VaultRole can be used to specify the Vault role, which should be used to get the secret from Vault. If the
-	// vaultRole property is set a new client with the specified Vault Role will be created and the shared client is
-	// ignored. If the operator is configured using the token auth method this property has no effect.
+	// VaultRole can be used to specify the Vault role, which should be used to
+	// get the secret from Vault. If the vaultRole property is set a new client
+	// with the specified Vault Role will be created and the shared client is
+	// ignored. If the operator is configured using the token auth method this
+	// property has no effect.
 	VaultRole string `json:"vaultRole,omitempty"`
-	// VaultNamespace can be used to specify the Vault namespace for a secret. When this value is set, the
-	// X-Vault-Namespace header will be set for the request. More information regarding namespaces can be found in the
-	// Vault Enterprise documentation: https://www.vaultproject.io/docs/enterprise/namespaces
+	// VaultNamespace can be used to specify the Vault namespace for a secret.
+	// When this value is set, the X-Vault-Namespace header will be set for the
+	// request. More information regarding namespaces can be found in the Vault
+	// Enterprise documentation: https://www.vaultproject.io/docs/enterprise/namespaces
 	VaultNamespace string `json:"vaultNamespace,omitempty"`
-	// ReconcileStrategy defines the strategy for reconcilation. The default value is "Replace", which replaces any
-	// existing data keys in a secret with the loaded keys from Vault. The second valid value is "Merge" wiche merges
-	// the loaded keys from Vault with the existing keys in a secret. Duplicated keys will be replaced with the value
-	// from Vault. Other values are not valid for this field.
+	// ReconcileStrategy defines the strategy for reconciliation. The default
+	// value is "Replace", which replaces any existing data keys in a secret
+	// with the loaded keys from Vault. The second valid value is "Merge" which
+	// merges the loaded keys from Vault with the existing keys in a secret.
+	// Duplicated keys will be replaced with the value from Vault. Other values
+	// are not valid for this field.
 	ReconcileStrategy string `json:"reconcileStrategy,omitempty"`
 	// Keys is an array of Keys, which should be included in the Kubernetes
-	// secret. If the Keys field is ommitted all keys from the Vault secret will
+	// secret. If the Keys field is omitted all keys from the Vault secret will
 	// be included in the Kubernetes secret.
 	Keys []string `json:"keys,omitempty"`
-	// Templates, if not empty will be run through the the Go templating engine, with `.Secrets` being mapped
-	// to the list of secrets received from Vault. When omitted set, all secrets will be added as key/val pairs
-	// under Secret.data.
+	// Templates, if not empty will be run through the the Go templating engine,
+	// with `.Secrets` being mapped to the list of secrets received from Vault.
+	// When omitted set, all secrets will be added as key/val pairs under
+	// Secret.data.
 	Templates map[string]string `json:"templates,omitempty"`
 	// Path is the path of the corresponding secret in Vault.
 	Path string `json:"path"`
@@ -45,16 +51,16 @@ type VaultSecretSpec struct {
 	Type corev1.SecretType `json:"type"`
 	// Version sets the version of the secret which should be used. The version
 	// is only used if the KVv2 secret engine is used. If the version is
-	// omitted the Operator uses the latest version of the secret. If the version
-	// omitted and the VAULT_RECONCILIATION_TIME environment variable is set, the
-	// Kubernetes secret will be updated if the Vault secret changes.
+	// omitted the Operator uses the latest version of the secret. If the
+	// version omitted and the VAULT_RECONCILIATION_TIME environment variable is
+	// set, the Kubernetes secret will be updated if the Vault secret changes.
 	Version int `json:"version,omitempty"`
 	// isBinary is a flag indicates if data stored in vault is
 	// binary data. Since vault does not store binary data natively,
-	// the binary data is stored as base64 encoded. However, same data get encoded
-	// again when operator stored them as secret in k8s which caused the data to
-	// get double encoded. This flag will skip the base64 encode which is needed
-	// for string data to avoid the double encode problem.
+	// the binary data is stored as base64 encoded. However, same data get
+	// encoded again when operator stored them as secret in k8s which caused the
+	// data to get double encoded. This flag will skip the base64 encode which
+	// is needed for string data to avoid the double encode problem.
 	IsBinary bool `json:"isBinary,omitempty"`
 }
 
