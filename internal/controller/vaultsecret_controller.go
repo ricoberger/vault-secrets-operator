@@ -107,8 +107,10 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Request object not found, could have been deleted after reconcile
+			// request.
+			// Owned objects are automatically garbage collected. For additional
+			// cleanup logic use finalizers.
 			// Return and don't requeue
 			return ctrl.Result{}, nil
 		}
@@ -126,7 +128,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		vaultSecretsReconciliationStatus.DeleteLabelValues(instance.Namespace, instance.Name)
 
 		if controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
-			// Remove the vaultsecretsFinalizer. Once the finalizer is removed the object will be deleted.
+			// Remove the vaultsecretsFinalizer. Once the finalizer is removed
+			// the object will be deleted.
 			controllerutil.RemoveFinalizer(instance, vaultsecretsFinalizer)
 			err = r.Update(ctx, instance)
 			if err != nil {
@@ -152,11 +155,13 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Get secret from Vault.
-	// If the VaultSecret contains the vaulRole property we are creating a new client with the specified Vault Role to
-	// get the secret.
-	// When the property isn't set we are using the shared client. It is also possible that the shared client is nil, so
-	// that we have to check for this first. This could happen since we do not return an error when we initializing the
-	// client during start up, to not require a default Vault Role.
+	// If the VaultSecret contains the vaulRole property we are creating a new
+	// client with the specified Vault Role to get the secret.
+	// When the property isn't set we are using the shared client. It is also
+	// possible that the shared client is nil, so that we have to check for this
+	// first. This could happen since we do not return an error when we
+	// initializing the client during start up, to not require a default Vault
+	// Role.
 	var data map[string][]byte
 
 	var vaultClient *vault.Client
@@ -181,9 +186,10 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		vaultClient = vault.SharedClient
 	}
 
-	// If the `VAULT_RESTRICT_NAMESPACE` environment variable is set to `true` the operator should only reconcile
-	// secrets which have the same Vault namespace configured as the operator (via the `VAULT_NAMESPACE` environment
-	// variable).
+	// If the `VAULT_RESTRICT_NAMESPACE` environment variable is set to `true`
+	// the operator should only reconcile secrets which have the same Vault
+	// namespace configured as the operator (via the `VAULT_NAMESPACE`
+	// environment variable).
 	if restricted, rootNamespace := vaultClient.IsNamespaceRestricted(); restricted && instance.Spec.VaultNamespace != rootNamespace {
 		log.Info("Ignore secret, since the operator is restricted to the another Vault namespace", "vaultNamespace", instance.Spec.VaultNamespace, "rootNamespace", rootNamespace)
 		return ctrl.Result{}, nil
@@ -264,7 +270,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Secret already exists, update the secret
-	// Merge -> Checks the existing data keys and merge them into the updated secret
+	// Merge -> Checks the existing data keys and merge them into the updated
+	//          secret
 	// Replace -> Do not check the data keys and replace the secret
 	if instance.Spec.ReconcileStrategy == "Merge" {
 		secret = mergeSecretData(secret, found)
@@ -330,7 +337,8 @@ func (r *VaultSecretReconciler) updateConditions(ctx context.Context, instance *
 	}
 }
 
-// ignorePredicate is used to ignore updates to CR status in which case metadata.Generation does not change.
+// ignorePredicate is used to ignore updates to CR status in which case
+// metadata.Generation does not change.
 func ignorePredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -363,7 +371,8 @@ type templateContext struct {
 	Annotations map[string]string
 }
 
-// runTemplate executes a template with the given secrets map, filled with the Vault secrets
+// runTemplate executes a template with the given secrets map, filled with the
+// Vault secrets
 func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[string][]byte) ([]byte, error) {
 	// Set up the context
 	sd := templateContext{
@@ -404,9 +413,12 @@ func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[
 }
 
 func templatingFunctions() template.FuncMap {
-	// We need to exclude some functions for security reasons and proper working of the operator, don't use TxtFuncMap:
-	// - no environment-variable related functions to prevent secrets from accessing the VAULT environment variables
-	// - no filesystem functions? Directory functions don't actually allow access to the FS, so they're OK.
+	// We need to exclude some functions for security reasons and proper
+	// working of the operator, don't use TxtFuncMap:
+	// - no environment-variable related functions to prevent secrets from
+	//   accessing the VAULT environment variables
+	// - no filesystem functions? Directory functions don't actually allow
+	//   access to the FS, so they're OK.
 	// - no other non-idempotent functions like random and crypto functions
 	funcmap := sprig.HermeticTxtFuncMap()
 
@@ -427,8 +439,8 @@ func templatingFunctions() template.FuncMap {
 	return funcmap
 }
 
-// newSecretForCR returns a secret with the same name/namespace as the CR. The secret will include all labels and
-// annotations from the CR.
+// newSecretForCR returns a secret with the same name/namespace as the CR. The
+// secret will include all labels and annotations from the CR.
 func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte) (*corev1.Secret, error) {
 	if cr.Spec.Templates != nil {
 		newdata := make(map[string][]byte)
