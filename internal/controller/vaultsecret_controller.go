@@ -10,11 +10,11 @@ import (
 	"time"
 
 	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
-	"github.com/ricoberger/vault-secrets-operator/internal/metrics"
 	"github.com/ricoberger/vault-secrets-operator/internal/validators"
 	"github.com/ricoberger/vault-secrets-operator/internal/vault"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
@@ -46,10 +47,33 @@ const (
 	pkiEngine = "pki"
 )
 
+var (
+	vaultSecretsReconciliationsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "vaultsecrets_reconciliations_total",
+			Help: "Total number of reconciliations",
+		},
+		[]string{"namespace", "name", "status"},
+	)
+	vaultSecretsReconciliationStatus = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "vaultsecrets_reconciliation_status",
+			Help: "Reconciliation status (0 = failed and 1 = ok)",
+		},
+		[]string{"namespace", "name"},
+	)
+)
+
 // VaultSecretReconciler reconciles a VaultSecret object
 type VaultSecretReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+}
+
+func init() {
+	// Register custom metrics with the global prometheus registry
+	metrics.Registry.MustRegister(vaultSecretsReconciliationsTotal)
+	metrics.Registry.MustRegister(vaultSecretsReconciliationStatus)
 }
 
 // +kubebuilder:rbac:groups=ricoberger.de,resources=vaultsecrets,verbs=get;list;watch;create;update;patch;delete
@@ -93,14 +117,15 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Check if the VaultSecret instance is marked to be deleted, which is
-	// indicated by the deletion timestamp being set. The object will be deleted.
+	// indicated by the deletion timestamp being set. The object will be
+	// deleted.
 	isVaultSecretMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
 	if isVaultSecretMarkedToBeDeleted {
-		if controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
-			metrics.VaultSecretsReconciliationsTotal.DeleteLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionTrue))
-			metrics.VaultSecretsReconciliationsTotal.DeleteLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionFalse))
-			metrics.VaultSecretsReconciliationStatus.DeleteLabelValues(instance.Namespace, instance.Name)
+		vaultSecretsReconciliationsTotal.DeleteLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionTrue))
+		vaultSecretsReconciliationsTotal.DeleteLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionFalse))
+		vaultSecretsReconciliationStatus.DeleteLabelValues(instance.Namespace, instance.Name)
 
+		if controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
 			// Remove the vaultsecretsFinalizer. Once the finalizer is removed the object will be deleted.
 			controllerutil.RemoveFinalizer(instance, vaultsecretsFinalizer)
 			err = r.Update(ctx, instance)
@@ -112,6 +137,18 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		return ctrl.Result{}, nil
+	}
+
+	// Add the vaultsecretsFinalizer to the VaultSecret. The finilizer is needed
+	// so that we can remove the metrics for a delete secret.
+	if !controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
+		controllerutil.AddFinalizer(instance, vaultsecretsFinalizer)
+		err := r.Update(ctx, instance)
+		if err != nil {
+			log.Error(err, "Failed to add finalizer.")
+			r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Get secret from Vault.
@@ -200,6 +237,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Set VaultSecret instance as the owner and controller
 	err = ctrl.SetControllerReference(instance, secret, r.Scheme)
 	if err != nil {
+		log.Error(err, "Could not set owner reference")
+		r.updateConditions(ctx, instance, conditionReasonCreateFailed, err.Error(), metav1.ConditionFalse)
 		return ctrl.Result{}, err
 	}
 
@@ -244,7 +283,14 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	} else {
 		if secret.Type == found.Type && reflect.DeepEqual(secret.Data, found.Data) && reflect.DeepEqual(secret.Labels, found.Labels) && reflect.DeepEqual(secret.Annotations, found.Annotations) && len(instance.Status.Conditions) == 1 && instance.Status.Conditions[0].Status == metav1.ConditionTrue {
+			// Skip updating the secret if there is not change to prevent
+			// unnecessary Kubernetes API calls. We still increase the total
+			// reconciliations metric and set the reconciliation status to 1, to
+			// reflect that the reconciliation was successful, even if there was
+			// no change.
 			log.Info("Skip updating a Secret cause no change", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+			vaultSecretsReconciliationsTotal.WithLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionTrue)).Inc()
+			vaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(1)
 		} else {
 			log.Info("Updating a Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
 			err = r.Update(ctx, secret)
@@ -257,28 +303,16 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	// Finally we add the vaultsecretsFinalizer to the VaultSecret. The finilizer is needed so that we can remove the
-	// metrics for a delete secret.
-	if !controllerutil.ContainsFinalizer(instance, vaultsecretsFinalizer) {
-		controllerutil.AddFinalizer(instance, vaultsecretsFinalizer)
-		err := r.Update(ctx, instance)
-		if err != nil {
-			log.Error(err, "Failed to add finalizer.")
-			r.updateConditions(ctx, instance, conditionReasonUpdateFailed, err.Error(), metav1.ConditionFalse)
-			return ctrl.Result{}, err
-		}
-	}
-
 	// Secret updated successfully - requeue only if no version is specified
 	return reconcileResult, nil
 }
 
 func (r *VaultSecretReconciler) updateConditions(ctx context.Context, instance *ricobergerdev1alpha1.VaultSecret, reason, message string, status metav1.ConditionStatus) {
-	metrics.VaultSecretsReconciliationsTotal.WithLabelValues(instance.Namespace, instance.Name, string(status)).Inc()
+	vaultSecretsReconciliationsTotal.WithLabelValues(instance.Namespace, instance.Name, string(status)).Inc()
 	if status == metav1.ConditionTrue {
-		metrics.VaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(1)
+		vaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(1)
 	} else {
-		metrics.VaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(0)
+		vaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(0)
 	}
 
 	instance.Status.Conditions = []metav1.Condition{{
