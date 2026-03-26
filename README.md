@@ -9,10 +9,7 @@ Create Kubernetes secrets from Vault for a secure GitOps based workflow.
 
 The **Vault Secrets Operator** creates Kubernetes secrets from Vault. The idea
 behind the Vault Secrets Operator is to manage secrets in Kubernetes cluster
-using a secure GitOps based workflow. For more information about a secure GitOps
-based workflow I recommend the article
-["Managing Secrets in Kubernetes"](https://www.weave.works/blog/managing-secrets-in-kubernetes)
-from [Weaveworks](https://www.weave.works). With the help of the Vault Secrets
+using a secure GitOps based workflow. With the help of the Vault Secrets
 Operator you can commit your secrets to your git repository using a custom
 resource. If you apply these secrets to your Kubernetes cluster the Operator
 will lookup the real secret in Vault and creates the corresponding Kubernetes
