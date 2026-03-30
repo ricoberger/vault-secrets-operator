@@ -3,24 +3,19 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
-
-permissions:
-  contents: read
+    tags:
+      - v*
 
 jobs:
-  changelog:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
-    name: Changelog
-    runs-on: ubuntu-latest
     steps:
-      - name: Update Changelog
-        uses: release-drafter/release-drafter@v6
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
         with:
-          config-name: release.yaml
-          disable-autolabeler: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: true
+          make_latest: true

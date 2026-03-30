@@ -1,25 +1,17 @@
+# yaml-language-server: $schema=https://golangci-lint.run/jsonschema/golangci.jsonschema.json
 ---
 version: "2"
-run:
-  modules-download-mode: readonly
 linters:
   default: none
   enable:
-    - dupl
-    - errcheck
-    - ginkgolinter
-    - goconst
-    - gocyclo
+    - bodyclose
+    - gosec
     - govet
     - ineffassign
-    - misspell
-    - nakedret
     - noctx
-    - revive
     - staticcheck
-    - unconvert
-    - unparam
     - unused
+    - whitespace
   exclusions:
     generated: lax
     presets:
@@ -27,10 +19,6 @@ linters:
       - common-false-positives
       - legacy
       - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 formatters:
   enable:
     - gofmt
@@ -39,9 +27,3 @@ formatters:
     goimports:
       local-prefixes:
         - github.com/ricoberger/vault-secrets-operator
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
