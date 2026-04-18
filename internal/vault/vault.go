@@ -148,6 +148,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 				return nil, fmt.Errorf("missing vault token")
 			}
 
+			//nolint:gosec
 			t, err := os.ReadFile(vaultTokenPath)
 			if err != nil {
 				return nil, err
@@ -215,6 +216,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 
 		// Read the service account token value and create a map for the
 		// authentication against Vault.
+		//nolint:gosec
 		kubeToken, err := os.ReadFile(serviceAccountTokenPath)
 		if err != nil {
 			return nil, err
@@ -269,6 +271,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			requestToken: func(c *Client) error {
 				// Read the service account token value and create a map for the
 				// authentication against Vault again as the token might have changed.
+				//nolint:gosec
 				kubeToken, err := os.ReadFile(serviceAccountTokenPath)
 				if err != nil {
 					return err
@@ -873,6 +876,7 @@ func setVaultIDs(idType string) string {
 		idPath = os.Getenv("VAULT_SECRET_ID_PATH")
 	}
 
+	//nolint:gosec
 	id, err := os.ReadFile(idPath)
 	if err != nil {
 		log.WithValues("VaultFilePath", idPath).Error(err, "missing secret vault-secrets-operator or bad path in volume")
