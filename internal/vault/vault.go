@@ -2,27 +2,18 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	gcpmetadata "cloud.google.com/go/compute/metadata"
 	gcpcredentials "cloud.google.com/go/iam/credentials/apiv1"
 	gcpcredentialspb "cloud.google.com/go/iam/credentials/apiv1/credentialspb"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	ec2imds "github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/aws/smithy-go/middleware"
-	smithyprivateprotocol "github.com/aws/smithy-go/private/protocol"
 	"github.com/hashicorp/vault/api"
 	"github.com/leosayous21/go-azure-msi/msi"
-	"github.com/pkg/errors"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iam/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -541,124 +532,25 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			vaultAwsPath = "auth/aws"
 		}
 
-		var awsLoginDataFunc func() (map[string]any, error)
-
-		switch vaultAwsAuthType {
-		case "ec2":
-			awsLoginDataFunc = func() (map[string]any, error) {
-				ctx := context.Background()
-				cfg, err := awsconfig.LoadDefaultConfig(ctx)
-				if err != nil {
-					return nil, errors.Wrap(err, "error creating a new session to create ec2metadata")
-				}
-
-				metadataSvc := ec2imds.NewFromConfig(cfg)
-				doc, err := metadataSvc.GetDynamicData(ctx, &ec2imds.GetDynamicDataInput{Path: "/instance-identity/document"})
-				if err != nil {
-					return nil, fmt.Errorf("error requesting doc: %w", err)
-				}
-				docContent, err := io.ReadAll(doc.Content)
-				if err != nil {
-					return nil, fmt.Errorf("failed to read doc: %w", err)
-				}
-
-				signature, err := metadataSvc.GetDynamicData(ctx, &ec2imds.GetDynamicDataInput{Path: "/instance-identity/signature"})
-				if err != nil {
-					return nil, fmt.Errorf("error requesting signature: %w", err)
-				}
-
-				kubeToken, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
-				if err != nil {
-					return nil, err
-				}
-
-				nonce := fmt.Sprintf("%x", sha256.Sum256(kubeToken))
-
-				return map[string]any{
-					"identity":  base64.StdEncoding.EncodeToString(docContent),
-					"signature": signature,
-					"nonce":     nonce,
-					"role":      vaultAwsRole,
-				}, nil
-			}
-		case "iam":
-			awsLoginDataFunc = func() (map[string]any, error) {
-				ctx := context.Background()
-
-				// In v2, LoadDefaultConfig automatically creates a credential
-				// provider chain that includes environment variables, web
-				// identity tokens, shared config/credentials, and IAM roles for
-				// EC2/ECS. This replaces the manual provider construction from
-				// v1.
-				cfg, err := awsconfig.LoadDefaultConfig(ctx,
-					awsconfig.WithRegion(vaultAwsRegion),
-				)
-				if err != nil {
-					return nil, err
-				}
-
-				svc := sts.NewFromConfig(cfg, func(o *sts.Options) {
-					o.EndpointResolverV2 = customEndpointResolver{AWSRegion: vaultAwsRegion}
-				})
-
-				var capturedRequest *http.Request
-				var params *sts.GetCallerIdentityInput
-
-				_, err = svc.GetCallerIdentity(ctx, params, func(o *sts.Options) {
-					o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
-						return stack.Build.Add(&customHeaderMiddleware{
-							HeaderName:  "X-Vault-AWS-IAM-Server-ID",
-							HeaderValue: vaultHeader,
-						}, middleware.After)
-					})
-					o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
-						return smithyprivateprotocol.AddCaptureRequestMiddleware(stack, capturedRequest)
-					})
-				})
-				if err != nil {
-					return nil, err
-				}
-
-				// Now extract out the relevant parts of the captured request.
-				headersJSON, err := json.Marshal(capturedRequest.Header)
-				if err != nil {
-					return nil, err
-				}
-
-				requestBody, err := io.ReadAll(capturedRequest.Body)
-				if err != nil {
-					return nil, err
-				}
-
-				return map[string]any{
-					"iam_http_request_method": capturedRequest.Method,
-					"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(capturedRequest.URL.String())),
-					"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJSON),
-					"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
-					"role":                    vaultAwsRole,
-				}, nil
-			}
-		default:
-			awsLoginDataFunc = func() (map[string]any, error) {
-				return nil, fmt.Errorf("invalid aws authentication type")
-			}
+		// The hashicorp/vault/api/auth/aws library expects the mount path
+		// without the "auth/" prefix (it prepends "auth/" itself), so we strip
+		// it to stay backwards compatible with the VAULT_AWS_PATH configuration.
+		awsCfg := awsAuthConfig{
+			authType:       vaultAwsAuthType,
+			region:         vaultAwsRegion,
+			role:           vaultAwsRole,
+			mountPath:      strings.TrimPrefix(vaultAwsPath, "auth/"),
+			serverIDHeader: vaultHeader,
+			// #nosec G101
+			kubeTokenPath: "/var/run/secrets/kubernetes.io/serviceaccount/token",
 		}
 
-		// Create login data according to AWS Auth Type
-		data, err := awsLoginDataFunc()
+		// Authenticate against Vault using the AWS Auth Method and set the token
+		// which the client should use for further interactions with Vault. We
+		// also set the lease duration of the token for the renew function.
+		secret, err := awsLogin(context.Background(), apiClient, awsCfg)
 		if err != nil {
 			return nil, err
-		}
-
-		// Authenticate against vault using the AWS Auth Method and set
-		// the token which the client should use for further interactions with
-		// Vault. We also set the lease duration of the token for the renew
-		// function.
-		secret, err := apiClient.Logical().Write(vaultAwsPath+"/login", data)
-		if err != nil {
-			return nil, err
-		} else if secret.Auth == nil {
-			return nil, fmt.Errorf("missing authentication information")
 		}
 
 		tokenLeaseDuration := secret.Auth.LeaseDuration
@@ -694,11 +586,7 @@ func CreateClient(vaultKubernetesRole string) (*Client, error) {
 			restrictNamespace:         vaultRestrictNamespace,
 			tokenMaxTTL:               tokenMaxTTL,
 			requestToken: func(c *Client) error {
-				data, err := awsLoginDataFunc()
-				if err != nil {
-					return err
-				}
-				secret, err := apiClient.Logical().Write(vaultAwsPath+"/login", data)
+				secret, err := awsLogin(context.Background(), c.client, awsCfg)
 				if err != nil {
 					return err
 				}
