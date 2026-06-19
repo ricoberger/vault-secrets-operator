@@ -20,9 +20,9 @@ workflow the Vault Secrets Operator can be used as replacement for this.
 ## Installation
 
 The Vault Secrets Operator can be installed via Helm. A list of all configurable
-values can be found [here](./charts/vault-secrets-operator/values.yaml). The chart assumes a vault server
-running at `http://vault:8200`, but can be overidden by specifying
-`--set vault.address=https://vault.example.com`
+values can be found [here](./charts/vault-secrets-operator/values.yaml). The
+chart assumes a vault server running at `http://vault:8200`, but can be
+overidden by specifying `--set vault.address=https://vault.example.com`
 
 ```sh
 helm upgrade --install vault-secrets-operator oci://ghcr.io/ricoberger/charts/vault-secrets-operator --version <VERSION>
@@ -726,6 +726,14 @@ The following fields are available:
 Certificate are renewed before expiration. You can set how long before
 expiration you want to renew by setting the `VAULT_PKI_RENEW` environment
 variable. The default is 1 hour.
+
+The operator only issues a new certificate when the Secret does not yet exist or
+when the certificate currently stored in the Secret expires within the
+`VAULT_PKI_RENEW` window. If the existing certificate is still valid (its
+remaining lifetime is larger than `VAULT_PKI_RENEW`), reconciliations - for
+example after an operator restart or a leader failover - leave the Secret
+untouched. This prevents unnecessary Secret updates which could otherwise
+trigger rollout restarts of workloads referencing the Secret.
 
 ### Using specific Vault Role for secrets
 
