@@ -3,6 +3,8 @@ package controller
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"reflect"
@@ -210,6 +212,41 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			log.Error(err, "Resource validation failed")
 			r.updateConditions(ctx, instance, conditionReasonInvalidResource, err.Error(), metav1.ConditionFalse)
 			return ctrl.Result{}, err
+		}
+
+		// Before issuing a new certificate we check if the Secret already
+		// exists and contains a certificate which is still valid. If the
+		// remaining lifetime of the existing certificate is larger than the
+		// configured renew window (VAULT_PKI_RENEW), we skip issuing a new
+		// certificate. This avoids unnecessary updates of the Kubernetes Secret
+		// on every reconcile (e.g. after an operator restart or leader
+		// failover), which could trigger unwanted rollout restarts of workloads
+		// referencing the Secret.
+		existing := &corev1.Secret{}
+		err = r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, existing)
+		if err != nil && !errors.IsNotFound(err) {
+			log.Error(err, "Could not get secret")
+			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+			return ctrl.Result{}, err
+		}
+
+		if err == nil {
+			if certExpiration, ok := certificateExpiration(existing.Data); ok {
+				renewAfter := time.Until(certExpiration) - vaultClient.GetPKIRenew()
+				if renewAfter > 0 {
+					// The existing certificate is still valid and outside the
+					// renew window, so we leave the existing Secret untouched.
+					// We mirror the behaviour of the "no change" path below to
+					// avoid unnecessary status updates and requeue shortly
+					// before the certificate needs to be renewed.
+					log.Info("Skip updating a Secret cause the certificate is still valid", "Secret.Namespace", instance.Namespace, "Secret.Name", instance.Name)
+					log.Info(fmt.Sprintf("Certificate will expire on %s and will be renewed on %s", certExpiration.String(), time.Now().Add(renewAfter).String()))
+					reconcileResult.RequeueAfter = renewAfter
+					vaultSecretsReconciliationsTotal.WithLabelValues(instance.Namespace, instance.Name, string(metav1.ConditionTrue)).Inc()
+					vaultSecretsReconciliationStatus.WithLabelValues(instance.Namespace, instance.Name).Set(1)
+					return reconcileResult, nil
+				}
+			}
 		}
 
 		var expiration *time.Time
@@ -474,4 +511,44 @@ func mergeSecretData(newSecret, foundSecret *corev1.Secret) *corev1.Secret {
 	}
 
 	return newSecret
+}
+
+// certificateExpiration parses the certificates contained in the provided
+// Secret data and returns the expiration date (NotAfter) of the certificate
+// which expires first. For a Secret created from Vault's PKI engine this is the
+// leaf certificate. All data values are scanned so that the function also works
+// when the certificate was moved into a different key via templates. The
+// returned boolean is false when no certificate could be found, e.g. when the
+// Secret does not (yet) contain a certificate or when a template transformed it
+// into a format which can not be parsed.
+func certificateExpiration(data map[string][]byte) (time.Time, bool) {
+	var expiration time.Time
+	found := false
+
+	for _, value := range data {
+		rest := value
+		for {
+			var block *pem.Block
+			block, rest = pem.Decode(rest)
+			if block == nil {
+				break
+			}
+
+			if block.Type != "CERTIFICATE" {
+				continue
+			}
+
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				continue
+			}
+
+			if !found || cert.NotAfter.Before(expiration) {
+				expiration = cert.NotAfter
+				found = true
+			}
+		}
+	}
+
+	return expiration, found
 }
