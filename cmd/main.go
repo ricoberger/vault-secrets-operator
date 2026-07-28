@@ -74,6 +74,25 @@ func main() {
 		setupLog.Error(err, "unable to get WatchNamespace, the manager will watch and manage resources in all namespaces")
 	}
 
+	labelSelector := os.Getenv("WATCH_NAMESPACE_LABEL_SELECTOR")
+
+	// Normalize the comma-separated namespace list (e.g. "ns1, ns2").
+	space := regexp.MustCompile(`\s+`)
+	var namespaceList []string
+	if watchNamespace != "" {
+		for _, ns := range strings.Split(space.ReplaceAllString(watchNamespace, ""), ",") {
+			if ns != "" {
+				namespaceList = append(namespaceList, ns)
+			}
+		}
+	}
+
+	nsFilter, err := controller.NewNamespaceFilter(namespaceList, labelSelector)
+	if err != nil {
+		setupLog.Error(err, "invalid WATCH_NAMESPACE_LABEL_SELECTOR")
+		os.Exit(1)
+	}
+
 	options := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -87,19 +106,21 @@ func main() {
 		LeaderElectionID:       "vaultsecretsoperator.ricoberger.de",
 	}
 
-	// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)
-	if watchNamespace != "" {
+	// reconcilerFilter is non-nil only when a label selector is configured; in
+	// that mode the cache is cluster-wide and the reconciler filters namespaces.
+	var reconcilerFilter *controller.NamespaceFilter
+
+	switch {
+	case nsFilter.UsesLabelSelector():
+		setupLog.Info("manager set up with namespace label selector",
+			"namespaces", watchNamespace, "labelSelector", labelSelector)
+		reconcilerFilter = nsFilter
+	case len(namespaceList) > 0:
+		// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)
 		setupLog.Info("manager set up with multiple namespaces", "namespaces", watchNamespace)
 
-		// remove whitespaces (e.g. WATCH_NAMESPACE=ns1, ns2)
-		space := regexp.MustCompile(`\s+`)
-		watchNamespace = space.ReplaceAllString(watchNamespace, "")
-
-		// split namespaces and setup cache
-		namespaces := make(map[string]cache.Config)
-		watchNamespaces := strings.SplitSeq(watchNamespace, ",")
-
-		for ns := range watchNamespaces {
+		namespaces := make(map[string]cache.Config, len(namespaceList))
+		for _, ns := range namespaceList {
 			namespaces[ns] = cache.Config{}
 		}
 
@@ -116,8 +137,9 @@ func main() {
 	}
 
 	if err = (&controller.VaultSecretReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		NamespaceFilter: reconcilerFilter,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VaultSecret")
 		os.Exit(1)
