@@ -73,6 +73,10 @@ spec:
             {{- else }}
               value: ""
             {{- end }}
+            {{- if and .Values.vault.namespaceLabelSelector (not .Values.rbac.namespaced) }}
+            - name: WATCH_NAMESPACE_LABEL_SELECTOR
+              value: {{ .Values.vault.namespaceLabelSelector | quote }}
+            {{- end }}
             {{- if .Values.vault.address }}
             - name: VAULT_ADDRESS
               value: {{ .Values.vault.address | quote }}

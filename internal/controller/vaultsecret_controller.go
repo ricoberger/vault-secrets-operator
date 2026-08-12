@@ -23,12 +23,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -70,6 +73,11 @@ var (
 type VaultSecretReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	// NamespaceFilter, when non-nil, restricts reconciliation to namespaces
+	// selected by name or label. It is only set when a label selector is
+	// configured (which forces a cluster-wide cache); otherwise it is nil and
+	// behavior is unchanged.
+	NamespaceFilter *NamespaceFilter
 }
 
 func init() {
@@ -85,6 +93,7 @@ func init() {
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -142,6 +151,19 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		return ctrl.Result{}, nil
+	}
+
+	// Skip VaultSecrets whose namespace is no longer selected for watching.
+	// Deletion is handled above, so finalizers are always removed regardless of
+	// namespace selection.
+	if r.NamespaceFilter != nil {
+		ns := &corev1.Namespace{}
+		if err := r.Get(ctx, types.NamespacedName{Name: instance.Namespace}, ns); err != nil {
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+		if !r.NamespaceFilter.Matches(instance.Namespace, ns.Labels) {
+			return ctrl.Result{}, nil
+		}
 	}
 
 	// Add the vaultsecretsFinalizer to the VaultSecret. The finilizer is needed
@@ -384,12 +406,66 @@ func ignorePredicate() predicate.Predicate {
 	}
 }
 
+// mapNamespaceToVaultSecrets enqueues every VaultSecret in a namespace when
+// that namespace becomes (or remains) selected, so label changes are picked up
+// dynamically.
+func (r *VaultSecretReconciler) mapNamespaceToVaultSecrets(ctx context.Context, obj client.Object) []reconcile.Request {
+	if r.NamespaceFilter == nil || !r.NamespaceFilter.Matches(obj.GetName(), obj.GetLabels()) {
+		return nil
+	}
+	list := &ricobergerdev1alpha1.VaultSecretList{}
+	if err := r.List(ctx, list, client.InNamespace(obj.GetName())); err != nil {
+		return nil
+	}
+	reqs := make([]reconcile.Request, 0, len(list.Items))
+	for i := range list.Items {
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{
+			Namespace: list.Items[i].Namespace,
+			Name:      list.Items[i].Name,
+		}})
+	}
+	return reqs
+}
+
+// namespaceBecameMatching admits only namespace events that bring a namespace
+// into the watched set: a namespace created already matching, or updated from
+// non-matching to matching. Namespaces that already matched are handled by the
+// primary VaultSecret watch, so re-enqueuing them here only causes redundant
+// reconciles (and status-update races), which this predicate avoids.
+func (r *VaultSecretReconciler) namespaceBecameMatching() predicate.Predicate {
+	matches := func(o client.Object) bool {
+		return r.NamespaceFilter != nil && r.NamespaceFilter.Matches(o.GetName(), o.GetLabels())
+	}
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return matches(e.Object) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return !matches(e.ObjectOld) && matches(e.ObjectNew) },
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *VaultSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.NamespaceFilter == nil {
+		// No label selector configured: unchanged behavior.
+		return ctrl.NewControllerManagedBy(mgr).
+			For(&ricobergerdev1alpha1.VaultSecret{}).
+			Owns(&corev1.Secret{}).
+			WithEventFilter(ignorePredicate()).
+			Complete(r)
+	}
+
+	// Label selector configured: the cache is cluster-wide, so the Reconcile
+	// guard is the single source of truth for namespace selection. Here we only
+	// add a Namespace watch to pick up label changes dynamically. Per-watch
+	// predicates are used (instead of WithEventFilter) because ignorePredicate
+	// keys on generation, which namespaces do not bump on label changes.
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&ricobergerdev1alpha1.VaultSecret{}).
-		Owns(&corev1.Secret{}).
-		WithEventFilter(ignorePredicate()).
+		For(&ricobergerdev1alpha1.VaultSecret{}, builder.WithPredicates(ignorePredicate())).
+		Owns(&corev1.Secret{}, builder.WithPredicates(ignorePredicate())).
+		Watches(&corev1.Namespace{},
+			handler.EnqueueRequestsFromMapFunc(r.mapNamespaceToVaultSecrets),
+			builder.WithPredicates(r.namespaceBecameMatching())).
 		Complete(r)
 }
 

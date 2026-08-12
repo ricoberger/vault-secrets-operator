@@ -38,6 +38,18 @@ rules:
   verbs:
   - create
   - patch
+{{- if not .Values.rbac.namespaced }}
+# Required by WATCH_NAMESPACE_LABEL_SELECTOR to discover namespaces by label.
+# Namespaces are cluster-scoped, so this is only granted for the ClusterRole.
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
 - apiGroups:
   - ""
   resources:

@@ -92,6 +92,11 @@ environmentVars:
 ## comma separated list via the namespaces value. If the value is empty the
 ## operator will watch all namespaces. If the value is empty and rbac.namespaced
 ## is set to true, then the namespace of the release will be used.
+## The namespaceLabelSelector value additionally watches every namespace whose
+## labels match a standard Kubernetes label selector (e.g. "team=platform" or
+## "env in (prod,staging)"). It combines with the namespaces value using OR
+## semantics and picks up matching namespaces dynamically. It requires the
+## cluster-wide ClusterRole (rbac.namespaced=false).
 vault:
   address: ""
   header: ""
@@ -112,6 +117,7 @@ vault:
   gcpRole: vault-secrets-operator
   reconciliationTime: 0
   namespaces: ""
+  namespaceLabelSelector: ""
 
 rbac:
   create: true
