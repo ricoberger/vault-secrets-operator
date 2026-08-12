@@ -1,6 +1,13 @@
 replicaCount: 1
 deploymentStrategy: {}
 
+## The number of old ReplicaSets to retain for rollback. Defaults to the
+## Kubernetes-native default (10) when unset, so this is a no-op unless
+## overridden.
+## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#clean-up-policy
+##
+revisionHistoryLimit: 10
+
 image:
   repository: ghcr.io/ricoberger/vault-secrets-operator
   ## Overrides the image tag whose default is the chart appVersion.
