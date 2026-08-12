@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -37,6 +38,22 @@ func (c *Client) GetCertificate(path string, role string, options map[string]str
 	}, false)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// Vault returns the "ca_chain" field as a list of PEM encoded
+	// certificates, which is not handled by convertData. Join the
+	// certificates into a single PEM string (same format as "issuing_ca"), so
+	// that a full CA chain can be built from a PKI-backed VaultSecret.
+	if caChain, ok := r.Data["ca_chain"].([]any); ok {
+		certs := make([]string, 0, len(caChain))
+		for _, cert := range caChain {
+			certStr, ok := cert.(string)
+			if !ok {
+				return nil, nil, fmt.Errorf("could not parse ca_chain value")
+			}
+			certs = append(certs, strings.TrimRight(certStr, "\n"))
+		}
+		data["ca_chain"] = []byte(strings.Join(certs, "\n"))
 	}
 
 	return data, &expiration, nil
