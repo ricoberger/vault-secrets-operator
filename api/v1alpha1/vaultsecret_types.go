@@ -34,8 +34,18 @@ type VaultSecretSpec struct {
 	// When omitted set, all secrets will be added as key/val pairs under
 	// Secret.data.
 	Templates map[string]string `json:"templates,omitempty"`
-	// Path is the path of the corresponding secret in Vault.
-	Path string `json:"path"`
+	// Path is the path of the corresponding secret in Vault. It is optional if
+	// the Paths field is set. When both are provided the secret referenced by
+	// Path is fetched first, followed by the secrets referenced by Paths.
+	Path string `json:"path,omitempty"`
+	// Paths is an optional list of additional Vault secret paths. All secrets
+	// referenced by Path and Paths are merged into a single Kubernetes secret.
+	// If multiple secrets contain the same key the value from the first secret
+	// in the resulting list (Path first, then Paths in order) is used. All
+	// secrets share the same top-level options (e.g. secretEngine, keys,
+	// version, isBinary and vaultNamespace). Multiple paths are only supported
+	// for the 'kv' secret engine.
+	Paths []string `json:"paths,omitempty"`
 	// SecretEngine specifies the type of the Vault secret engine in which the
 	// secret is stored. Currently the 'KV Secrets Engine - Version 1' and
 	// 'KV Secrets Engine - Version 2' are supported. The value must be 'kv'. If

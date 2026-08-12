@@ -521,6 +521,38 @@ to `Merge` via the `reconcileStrategy` key in the CRD. For the default `Replace`
 strategy the complete secret is replaced. If you have an existing secret you can
 choose the `Merge` strategy to add the keys from Vault to the existing secret.
 
+### Creating a secret from multiple Vault paths
+
+A single Kubernetes secret can be created from multiple Vault secrets by using
+the `paths` property. All secrets referenced by `path` and `paths` are merged
+into a single Kubernetes secret. The secrets share the same top-level options
+(e.g. `keys`, `version`, `isBinary`, `secretEngine` and `vaultNamespace`) and
+multiple paths are only supported for the `kv` secret engine.
+
+The paths are processed in order: the optional `path` field is used first,
+followed by the entries in `paths`. If multiple Vault secrets contain the same
+key, the value from the **first** path which provides that key is used.
+
+```yaml
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: prometheus-scrape-configs
+  namespace: monitoring
+spec:
+  keys:
+    - kuma_password
+  path: kvv2/ORG/secret1
+  paths:
+    - kvv2/ORG/secret2
+  type: Opaque
+```
+
+When the `templates` property is used, all secrets are additionally available
+per path via the `.SecretsPaths` context, so that duplicate keys from different
+paths can still be accessed. See
+[Templating context](#templating-context) for details.
+
 ### Using templated secrets
 
 When straight-forward secrets are not sufficient, and the target secrets need to
@@ -568,10 +600,18 @@ problems:
 The context available in the templating engine contains the following items:
 
 - `.Secrets`: Map with all the secrets fetched from vault. Key = secret name,
-  Value = secret value
+  Value = secret value. When multiple Vault paths are configured (see
+  [Creating a secret from multiple Vault paths](#creating-a-secret-from-multiple-vault-paths))
+  and they contain the same key, the value from the first path wins.
+- `.SecretsPaths`: Ordered list with the secrets of each configured Vault path,
+  so that all secrets are available even when multiple paths contain the same
+  key. Each entry has a `.Path` (the Vault path) and a `.Secrets` map (Key =
+  secret name, Value = secret value). The entries are ordered like the resulting
+  path list (`path` first, followed by `paths`).
 - `.Vault`: Contains misc info about the Vault setup
   - `.Vault.Address`: configured address of the Vault instance
-  - `.Vault.Path`: path of the Vault secret that was fetched
+  - `.Vault.Path`: value of the `path` field of the Vault secret that was fetched
+  - `.Vault.Paths`: value of the `paths` field of the Vault secret that was fetched
 - `.Namespace`: Namespace where the custom resource instance was deployed.
 - `.Labels`: access to the labels of the custom resource instance
 - `.Annotations`: access to the annotations of the custom resource instance
