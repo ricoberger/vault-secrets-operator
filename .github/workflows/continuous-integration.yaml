@@ -106,3 +106,20 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64
+
+  helm:
+    name: Helm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Lint Helm Chart
+        run: |
+          helm lint ./charts/vault-secrets-operator
+
+      - name: Template Helm Chart
+        run: |
+          helm template ./charts/vault-secrets-operator
