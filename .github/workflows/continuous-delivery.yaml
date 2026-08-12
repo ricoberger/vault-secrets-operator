@@ -72,10 +72,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set Version
-        id: version
+      - name: Lint Helm Chart
         run: |
-          echo VERSION=$(yq -r .version ./charts/vault-secrets-operator/Chart.yaml) >> $GITHUB_ENV
+          helm lint ./charts/vault-secrets-operator
+
+      - name: Template Helm Chart
+        run: |
+          helm template ./charts/vault-secrets-operator
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -84,7 +87,24 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
 
-      - name: Package and Push Helm Chart
+      - name: Set Version
+        id: version
         run: |
-          helm package ./charts/vault-secrets-operator --version ${{ env.VERSION }}
-          helm push ./vault-secrets-operator-${{ env.VERSION }}.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
+          echo version=$(yq -r .version ./charts/vault-secrets-operator/Chart.yaml) >> $GITHUB_OUTPUT
+
+      - name: Check if Version is Already Published
+        id: check
+        run: |
+          if helm show chart oci://ghcr.io/${{ github.repository_owner }}/charts/vault-secrets-operator --version ${{ steps.version.outputs.version }} > /dev/null 2>&1; then
+            echo "Chart version ${{ steps.version.outputs.version }} is already published, skipping"
+            echo "publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "Chart version ${{ steps.version.outputs.version }} is not published yet"
+            echo "publish=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Package and Push Helm Chart
+        if: steps.check.outputs.publish == 'true'
+        run: |
+          helm package ./charts/vault-secrets-operator --version ${{ steps.version.outputs.version }}
+          helm push ./vault-secrets-operator-${{ steps.version.outputs.version }}.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
