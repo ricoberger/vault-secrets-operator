@@ -10,6 +10,10 @@ import (
 	"math/big"
 	"testing"
 	"time"
+
+	ricobergerdev1alpha1 "github.com/ricoberger/vault-secrets-operator/api/v1alpha1"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 // testCertPEM generates a self-signed certificate which expires at notAfter and
@@ -118,6 +122,85 @@ func TestCertificateExpiration(t *testing.T) {
 	t.Run("empty data", func(t *testing.T) {
 		if _, ok := certificateExpiration(map[string][]byte{}); ok {
 			t.Error("expected no certificate to be found")
+		}
+	})
+}
+
+// TestMergeSecretsPaths verifies that merging multiple Vault paths follows the
+// first-wins strategy for duplicate keys.
+func TestMergeSecretsPaths(t *testing.T) {
+	secretsPaths := []secretPath{
+		{Path: "kv/secret1", Secrets: map[string][]byte{
+			"shared": []byte("from-secret1"),
+			"only1":  []byte("value1"),
+		}},
+		{Path: "kv/secret2", Secrets: map[string][]byte{
+			"shared": []byte("from-secret2"),
+			"only2":  []byte("value2"),
+		}},
+	}
+
+	got := mergeSecretsPaths(secretsPaths)
+
+	want := map[string]string{
+		"shared": "from-secret1",
+		"only1":  "value1",
+		"only2":  "value2",
+	}
+
+	if len(got) != len(want) {
+		t.Fatalf("got %d keys, want %d: %v", len(got), len(want), got)
+	}
+	for k, v := range want {
+		if string(got[k]) != v {
+			t.Errorf("key %q = %q, want %q", k, string(got[k]), v)
+		}
+	}
+}
+
+// TestNewSecretForCRMultiplePaths verifies that the merged data and the
+// per-path templating context (.SecretsPaths) are set up correctly when a
+// secret is built from multiple Vault paths.
+func TestNewSecretForCRMultiplePaths(t *testing.T) {
+	cr := &ricobergerdev1alpha1.VaultSecret{}
+	cr.Name = "example"
+	cr.Namespace = "default"
+	cr.Spec.Path = "kv/secret1"
+	cr.Spec.Paths = []string{"kv/secret2"}
+	cr.Spec.Type = corev1.SecretTypeOpaque
+
+	secretsPaths := []secretPath{
+		{Path: "kv/secret1", Secrets: map[string][]byte{"shared": []byte("first")}},
+		{Path: "kv/secret2", Secrets: map[string][]byte{"shared": []byte("second")}},
+	}
+	data := mergeSecretsPaths(secretsPaths)
+
+	t.Run("without templates uses first-wins merged data", func(t *testing.T) {
+		secret, err := newSecretForCR(cr, data, secretsPaths)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got := string(secret.Data["shared"]); got != "first" {
+			t.Errorf("shared = %q, want %q", got, "first")
+		}
+	})
+
+	t.Run("templates expose all paths via SecretsPaths", func(t *testing.T) {
+		crWithTemplates := cr.DeepCopy()
+		crWithTemplates.Spec.Templates = map[string]string{
+			"combined": "{%- range .SecretsPaths %}{% .Secrets.shared %},{% end -%}",
+			"firstWin": "{% .Secrets.shared %}",
+		}
+
+		secret, err := newSecretForCR(crWithTemplates, data, secretsPaths)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got := string(secret.Data["combined"]); got != "first,second," {
+			t.Errorf("combined = %q, want %q", got, "first,second,")
+		}
+		if got := string(secret.Data["firstWin"]); got != "first" {
+			t.Errorf("firstWin = %q, want %q", got, "first")
 		}
 	})
 }

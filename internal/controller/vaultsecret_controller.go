@@ -188,6 +188,8 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Role.
 	var data map[string][]byte
 
+	var secretsPaths []secretPath
+
 	var vaultClient *vault.Client
 
 	if instance.Spec.VaultRole != "" {
@@ -219,15 +221,46 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
+	// Validate that at least one Vault path is configured via the 'path' or
+	// 'paths' field.
+	if err := validators.ValidatePaths(instance); err != nil {
+		log.Error(err, "Resource validation failed")
+		r.updateConditions(ctx, instance, conditionReasonInvalidResource, err.Error(), metav1.ConditionFalse)
+		return ctrl.Result{}, err
+	}
+
 	switch instance.Spec.SecretEngine {
 	case "", kvEngine:
-		data, err = vaultClient.GetSecret(instance.Spec.Path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
-		if err != nil {
-			// Error while getting the secret from Vault - requeue the request.
-			log.Error(err, "Could not get secret from vault")
-			r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
-			return ctrl.Result{}, err
+		// Build the ordered list of Vault paths. The optional 'path' field is
+		// fetched first, followed by the paths from the 'paths' field. All
+		// paths share the same top-level options (e.g. keys, version, isBinary
+		// and vaultNamespace). When multiple secrets contain the same key, the
+		// value from the first path in this list wins.
+		paths := make([]string, 0, len(instance.Spec.Paths)+1)
+		if instance.Spec.Path != "" {
+			paths = append(paths, instance.Spec.Path)
 		}
+		paths = append(paths, instance.Spec.Paths...)
+
+		secretsPaths = make([]secretPath, 0, len(paths))
+
+		for _, path := range paths {
+			pathData, err := vaultClient.GetSecret(path, instance.Spec.Keys, instance.Spec.Version, instance.Spec.IsBinary, instance.Spec.VaultNamespace)
+			if err != nil {
+				// Error while getting the secret from Vault - requeue the
+				// request. A failure for any single path fails the whole
+				// reconciliation, so that we never create a partial secret.
+				log.Error(err, "Could not get secret from vault", "path", path)
+				r.updateConditions(ctx, instance, conditionReasonFetchFailed, err.Error(), metav1.ConditionFalse)
+				return ctrl.Result{}, err
+			}
+
+			secretsPaths = append(secretsPaths, secretPath{Path: path, Secrets: pathData})
+		}
+
+		// Merge the fetched data of all paths. The first path which provides a
+		// key wins, so we do not overwrite existing keys.
+		data = mergeSecretsPaths(secretsPaths)
 
 	case pkiEngine:
 		if err := validators.ValidatePKI(instance); err != nil {
@@ -291,7 +324,7 @@ func (r *VaultSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Define a new Secret object
-	secret, err := newSecretForCR(instance, data)
+	secret, err := newSecretForCR(instance, data, secretsPaths)
 	if err != nil {
 		// Error while creating the Kubernetes secret - requeue the request.
 		log.Error(err, "Could not create Kubernetes secret")
@@ -471,27 +504,61 @@ func (r *VaultSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // Context provided to the templating engine
 
+// secretPath holds the secret data fetched from a single Vault path. It is used
+// to build the ordered .SecretsPaths list for the templating context, so that
+// all secrets are available in the template, even when multiple paths contain
+// the same key.
+type secretPath struct {
+	Path    string
+	Secrets map[string][]byte
+}
+
+// mergeSecretsPaths merges the secret data of the given paths into a single
+// map. The paths are processed in order and the first path which provides a
+// given key wins, so existing keys are never overwritten.
+func mergeSecretsPaths(secretsPaths []secretPath) map[string][]byte {
+	data := make(map[string][]byte)
+	for _, sp := range secretsPaths {
+		for key, value := range sp.Secrets {
+			if _, ok := data[key]; !ok {
+				data[key] = value
+			}
+		}
+	}
+	return data
+}
+
 type templateVaultContext struct {
 	Path    string
+	Paths   []string
 	Address string
 }
 
+// templateSecretPath is the per-path secret data as exposed to the templating
+// engine (with values converted to strings).
+type templateSecretPath struct {
+	Path    string
+	Secrets map[string]string
+}
+
 type templateContext struct {
-	Secrets     map[string]string
-	Vault       templateVaultContext
-	Namespace   string
-	Labels      map[string]string
-	Annotations map[string]string
+	Secrets      map[string]string
+	SecretsPaths []templateSecretPath
+	Vault        templateVaultContext
+	Namespace    string
+	Labels       map[string]string
+	Annotations  map[string]string
 }
 
 // runTemplate executes a template with the given secrets map, filled with the
 // Vault secrets
-func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[string][]byte) ([]byte, error) {
+func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[string][]byte, secretsPaths []secretPath) ([]byte, error) {
 	// Set up the context
 	sd := templateContext{
 		Secrets: make(map[string]string, len(secrets)),
 		Vault: templateVaultContext{
 			Path:    cr.Spec.Path,
+			Paths:   cr.Spec.Paths,
 			Address: os.Getenv("VAULT_ADDRESS"),
 		},
 		Namespace:   cr.Namespace,
@@ -502,6 +569,17 @@ func runTemplate(cr *ricobergerdev1alpha1.VaultSecret, tmpl string, secrets map[
 	// For templating, these should all be strings, convert
 	for k, v := range secrets {
 		sd.Secrets[k] = string(v)
+	}
+
+	// Expose the per-path secrets in order, so that all secrets are available
+	// in the template even when multiple paths contain the same key.
+	sd.SecretsPaths = make([]templateSecretPath, 0, len(secretsPaths))
+	for _, sp := range secretsPaths {
+		converted := make(map[string]string, len(sp.Secrets))
+		for k, v := range sp.Secrets {
+			converted[k] = string(v)
+		}
+		sd.SecretsPaths = append(sd.SecretsPaths, templateSecretPath{Path: sp.Path, Secrets: converted})
 	}
 
 	funcmap := templatingFunctions()
@@ -554,11 +632,11 @@ func templatingFunctions() template.FuncMap {
 
 // newSecretForCR returns a secret with the same name/namespace as the CR. The
 // secret will include all labels and annotations from the CR.
-func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte) (*corev1.Secret, error) {
+func newSecretForCR(cr *ricobergerdev1alpha1.VaultSecret, data map[string][]byte, secretsPaths []secretPath) (*corev1.Secret, error) {
 	if cr.Spec.Templates != nil {
 		newdata := make(map[string][]byte)
 		for k, v := range cr.Spec.Templates {
-			templated, err := runTemplate(cr, v, data)
+			templated, err := runTemplate(cr, v, data, secretsPaths)
 			if err != nil {
 				return nil, fmt.Errorf("template ERROR: %w", err)
 			}

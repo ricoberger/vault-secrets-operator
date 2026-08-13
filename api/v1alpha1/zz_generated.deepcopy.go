@@ -83,6 +83,11 @@ func (in *VaultSecretSpec) DeepCopyInto(out *VaultSecretSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.Paths != nil {
+		in, out := &in.Paths, &out.Paths
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.EngineOptions != nil {
 		in, out := &in.EngineOptions, &out.EngineOptions
 		*out = make(map[string]string, len(*in))
