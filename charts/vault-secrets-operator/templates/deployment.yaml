@@ -11,7 +11,7 @@ metadata:
   {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  {{- if .Values.revisionHistoryLimit }}
+  {{- if hasKey .Values "revisionHistoryLimit" }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   {{- end }}
   {{- with .Values.deploymentStrategy }}
